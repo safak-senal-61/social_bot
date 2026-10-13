@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "bot": "npx tsx scripts/run-bot.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

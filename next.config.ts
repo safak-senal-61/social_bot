@@ -1,15 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
+  // Sharp'ın sunucu tarafında düzgün çalışması için
+  serverExternalPackages: ["sharp"],
+  // API route boyut limiti — büyük fotoğraflar için (Telegram max 20MB gönderir)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "25mb",
     },
   },
 };
