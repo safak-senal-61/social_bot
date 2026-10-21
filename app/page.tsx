@@ -11,10 +11,14 @@ interface Settings {
   fbPageAccessToken: string;
   igUserId: string;
   linkedinAccessToken: string;
+  linkedinOrganizationId?: string;
   cloudinaryCloudName: string;
   cloudinaryApiKey: string;
   cloudinaryApiSecret: string;
   appUrl: string;
+  geminiApiKey?: string;
+  watermarkEnabled?: boolean;
+  watermarkText?: string;
   notificationEmail?: string;
   smtpHost?: string;
   smtpUser?: string;
@@ -38,20 +42,260 @@ export default function Dashboard() {
     fbPageAccessToken: "",
     igUserId: "",
     linkedinAccessToken: "",
+    linkedinOrganizationId: "",
     cloudinaryCloudName: "",
     cloudinaryApiKey: "",
     cloudinaryApiSecret: "",
     appUrl: "",
+    geminiApiKey: "",
+    watermarkEnabled: true,
+    watermarkText: "Günübirlik",
     notificationEmail: "",
     smtpHost: "",
     smtpUser: "",
     smtpPass: "",
   });
 
-  const [activeTab, setActiveTab] = useState<"overview" | "telegram" | "facebook" | "linkedin" | "cloudinary" | "features">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "history" | "schedule" | "aistudio" | "autoreply" | "telegram" | "facebook" | "linkedin" | "cloudinary" | "features" | "debug"
+  >("overview");
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [scheduleQueue, setScheduleQueue] = useState<any[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  // AI Studio State
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiFormat, setAiFormat] = useState<"feed" | "story">("feed");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<{
+    imageBase64: string;
+    imagePath: string;
+    caption: string;
+    format: "feed" | "story";
+    prompt: string;
+  } | null>(null);
+  const [aiPublishStatus, setAiPublishStatus] = useState<string | null>(null);
+  const [aiPublishLoading, setAiPublishLoading] = useState(false);
+
+  // Auto-Reply State
+  const [autoReplyRules, setAutoReplyRules] = useState<any[]>([]);
+  const [autoReplyHistory, setAutoReplyHistory] = useState<any[]>([]);
+  const [autoReplyLoading, setAutoReplyLoading] = useState(false);
+  const [autoReplyCheckStatus, setAutoReplyCheckStatus] = useState<string | null>(null);
+  const [newRuleKeywords, setNewRuleKeywords] = useState("");
+  const [newRuleReply, setNewRuleReply] = useState("");
+  const [newRuleName, setNewRuleName] = useState("");
+
+  // Debug Console State
+  const [systemLogs, setSystemLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logFilter, setLogFilter] = useState<"all" | "error" | "success" | "telegram" | "api">("all");
+  const [autoRefreshLogs, setAutoRefreshLogs] = useState(true);
+
+  const fetchLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const res = await fetch("/api/logs");
+      const data = await res.json();
+      if (data.success) setSystemLogs(data.logs || []);
+    } catch {} finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const clearLogs = async () => {
+    if (!confirm("Tüm sistem loglarını silmek istediğinize emin misiniz?")) return;
+    try {
+      await fetch("/api/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear" }),
+      });
+      setSystemLogs([]);
+    } catch {
+      alert("Loglar silinemedi");
+    }
+  };
+
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/history");
+      const data = await res.json();
+      if (data.success) setHistory(data.history || []);
+    } catch {} finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const fetchSchedule = async () => {
+    setScheduleLoading(true);
+    try {
+      const res = await fetch("/api/schedule");
+      const data = await res.json();
+      if (data.success) setScheduleQueue(data.queue || []);
+    } catch {} finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  const fetchAutoReply = async () => {
+    setAutoReplyLoading(true);
+    try {
+      const res = await fetch("/api/autoreply");
+      const data = await res.json();
+      if (data.success) {
+        setAutoReplyRules(data.rules || []);
+        setAutoReplyHistory(data.history || []);
+      }
+    } catch {} finally {
+      setAutoReplyLoading(false);
+    }
+  };
+
+  const handleGenerateAi = async () => {
+    if (!aiPrompt.trim()) return;
+    setAiLoading(true);
+    setAiResult(null);
+    setAiPublishStatus(null);
+    try {
+      const res = await fetch("/api/ai-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, format: aiFormat }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiResult(data.data);
+      } else {
+        alert("Üretim hatası: " + data.error);
+      }
+    } catch (e: any) {
+      alert("Hata: " + e.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handlePublishAiPost = async () => {
+    if (!aiResult) return;
+    setAiPublishLoading(true);
+    setAiPublishStatus(null);
+    try {
+      const res = await fetch("/api/quick-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: aiResult.caption }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiPublishStatus("✅ Başarıyla sayfanızda yayınlandı!");
+        fetchHistory();
+      } else {
+        setAiPublishStatus(`❌ Paylaşım hatası: ${data.error}`);
+      }
+    } catch (e: any) {
+      setAiPublishStatus(`❌ Hata: ${e.message}`);
+    } finally {
+      setAiPublishLoading(false);
+    }
+  };
+
+  const cancelScheduledItem = async (id: string) => {
+    if (!confirm("Bu zamanlanmış gönderiyi iptal etmek istediğinize emin misiniz?")) return;
+    try {
+      await fetch("/api/schedule", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      fetchSchedule();
+    } catch {
+      alert("İptal işlemi başarısız");
+    }
+  };
+
+  const triggerAutoReplyCheck = async () => {
+    setAutoReplyCheckStatus("Yorumlar taranıyor...");
+    try {
+      const res = await fetch("/api/autoreply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "trigger_check" }),
+      });
+      const data = await res.json();
+      setAutoReplyCheckStatus(data.message || "Tarama tamamlandı.");
+      fetchAutoReply();
+    } catch (e: any) {
+      setAutoReplyCheckStatus("Hata: " + e.message);
+    }
+  };
+
+  const saveAutoReplyRules = async (rulesToSave: any[]) => {
+    try {
+      await fetch("/api/autoreply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rules: rulesToSave }),
+      });
+      setAutoReplyRules(rulesToSave);
+    } catch {
+      alert("Kurallar kaydedilemedi");
+    }
+  };
+
+  const toggleRule = (ruleId: string) => {
+    const updated = autoReplyRules.map((r) =>
+      r.id === ruleId ? { ...r, enabled: !r.enabled } : r
+    );
+    saveAutoReplyRules(updated);
+  };
+
+  const addCustomRule = () => {
+    if (!newRuleKeywords.trim() || !newRuleReply.trim()) {
+      alert("Lütfen anahtar kelime ve yanıt metnini girin.");
+      return;
+    }
+    const keywords = newRuleKeywords.split(",").map((k) => k.trim()).filter(Boolean);
+    const newRule = {
+      id: `rule_${Date.now()}`,
+      name: newRuleName.trim() || "Özel Kural",
+      keywords,
+      reply: newRuleReply.trim(),
+      enabled: true,
+    };
+    const updated = [...autoReplyRules, newRule];
+    saveAutoReplyRules(updated);
+    setNewRuleKeywords("");
+    setNewRuleReply("");
+    setNewRuleName("");
+  };
+
+  const deleteRule = (ruleId: string) => {
+    if (!confirm("Bu kuralı silmek istediğinize emin misiniz?")) return;
+    const updated = autoReplyRules.filter((r) => r.id !== ruleId);
+    saveAutoReplyRules(updated);
+  };
+
+  useEffect(() => {
+    if (activeTab === "history") fetchHistory();
+    if (activeTab === "schedule") fetchSchedule();
+    if (activeTab === "autoreply") fetchAutoReply();
+    if (activeTab === "debug") fetchLogs();
+  }, [activeTab]);
+
+  // Debug sekmesinde açıkken otomatik 4 saniyede bir logları tazele
+  useEffect(() => {
+    if (activeTab !== "debug" || !autoRefreshLogs) return;
+    const interval = setInterval(() => {
+      fetchLogs();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeTab, autoRefreshLogs]);
 
   // Şifre alanlarının görünürlüğü
   const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
@@ -67,7 +311,7 @@ export default function Dashboard() {
   const [testPostStatus, setTestPostStatus] = useState<string | null>(null);
   const [testPostLoading, setTestPostLoading] = useState(false);
 
-  // Ayarları yükle
+  // Ayarları ve verileri yükle
   useEffect(() => {
     fetch("/api/settings")
       .then((res) => res.json())
@@ -78,6 +322,10 @@ export default function Dashboard() {
       })
       .catch((err) => console.error("Ayarlar yüklenirken hata:", err))
       .finally(() => setLoading(false));
+
+    fetchHistory();
+    fetchSchedule();
+    fetchAutoReply();
   }, []);
 
   const handleChange = (key: keyof Settings, val: string) => {
@@ -326,6 +574,30 @@ export default function Dashboard() {
           📊 Genel Durum
         </button>
         <button
+          onClick={() => setActiveTab("history")}
+          className={`tab-btn ${activeTab === "history" ? "active" : ""}`}
+        >
+          📜 Paylaşım Geçmişi {history.length > 0 && `(${history.length})`}
+        </button>
+        <button
+          onClick={() => setActiveTab("schedule")}
+          className={`tab-btn ${activeTab === "schedule" ? "active" : ""}`}
+        >
+          ⏰ Zamanlanmış Kuyruk {scheduleQueue.length > 0 && `(${scheduleQueue.length})`}
+        </button>
+        <button
+          onClick={() => setActiveTab("aistudio")}
+          className={`tab-btn ${activeTab === "aistudio" ? "active" : ""}`}
+        >
+          🎨 AI Stüdyosu (Ücretsiz)
+        </button>
+        <button
+          onClick={() => setActiveTab("autoreply")}
+          className={`tab-btn ${activeTab === "autoreply" ? "active" : ""}`}
+        >
+          💬 Otomatik Yanıt {autoReplyRules.length > 0 && `(${autoReplyRules.length})`}
+        </button>
+        <button
           onClick={() => setActiveTab("telegram")}
           className={`tab-btn ${activeTab === "telegram" ? "active" : ""}`}
         >
@@ -353,7 +625,7 @@ export default function Dashboard() {
           onClick={() => setActiveTab("features")}
           className={`tab-btn ${activeTab === "features" ? "active" : ""}`}
         >
-          ✨ Yeni Özellikler & Mail
+          ✨ AI, Filigran & Özellikler
         </button>
       </div>
 
@@ -471,6 +743,613 @@ export default function Dashboard() {
               <li>Sayfanızda paylaşmak istediğiniz bir <strong>fotoğraf</strong> veya <strong>video</strong> gönderin.</li>
               <li>Medyanın altına yazdığınız açıklama (caption) doğrudan Facebook sayfanızın gönderi metni olarak paylaşılacaktır.</li>
             </ol>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: PAYLAŞIM GEÇMİŞİ (HISTORY) */}
+      {activeTab === "history" && (
+        <div>
+          {/* İstatistik & Başlık */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
+            <div>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>📜 Paylaşım Geçmişi & İstatistikler</h2>
+              <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+                Telegram üzerinden sosyal medya hesaplarınıza gönderilen tüm paylaşımlar
+              </p>
+            </div>
+            <button
+              onClick={fetchHistory}
+              disabled={historyLoading}
+              className="btn-secondary"
+              style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
+            >
+              {historyLoading ? "Yenileniyor..." : "🔄 Yenile"}
+            </button>
+          </div>
+
+          {/* Özet İstatistik Kartları */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+            <div className="panel-card" style={{ marginBottom: 0, padding: "1rem" }}>
+              <div style={{ color: "#9ca3af", fontSize: "0.8rem", fontWeight: 500 }}>Toplam Paylaşım</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, marginTop: "0.25rem", color: "#60a5fa" }}>
+                {history.length}
+              </div>
+            </div>
+            <div className="panel-card" style={{ marginBottom: 0, padding: "1rem" }}>
+              <div style={{ color: "#9ca3af", fontSize: "0.8rem", fontWeight: 500 }}>Başarılı Yayınlar</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, marginTop: "0.25rem", color: "#34d399" }}>
+                {history.filter((h) => h.status === "published").length}
+              </div>
+            </div>
+            <div className="panel-card" style={{ marginBottom: 0, padding: "1rem" }}>
+              <div style={{ color: "#9ca3af", fontSize: "0.8rem", fontWeight: 500 }}>Zamanlanmış Kuyruk</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, marginTop: "0.25rem", color: "#fbbf24" }}>
+                {scheduleQueue.length}
+              </div>
+            </div>
+          </div>
+
+          {/* Geçmiş Gönderi Listesi */}
+          {historyLoading && history.length === 0 ? (
+            <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1rem" }}>
+              <div style={{ width: "32px", height: "32px", border: "3px solid #3b82f6", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 1rem auto" }} />
+              <p style={{ color: "#9ca3af" }}>Paylaşım geçmişi yükleniyor...</p>
+            </div>
+          ) : history.length === 0 ? (
+            <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
+              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📭</div>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>Henüz Paylaşım Yapılmadı</h3>
+              <p style={{ color: "#9ca3af", fontSize: "0.875rem", maxWidth: "460px", margin: "0 auto 1.5rem auto" }}>
+                Telegram botunuza bir fotoğraf gönderin. AI otomatik başlık üretsin veya kendi açıklamanızı ekleyin, ardından hemen veya zamanlayarak paylaşın!
+              </p>
+              <a
+                href="https://t.me/Social_gunubirlik_bot"
+                target="_blank"
+                rel="noreferrer"
+                className="btn-primary"
+                style={{ textDecoration: "none", display: "inline-block", fontSize: "0.85rem" }}
+              >
+                ✈️ Telegram Botu Aç (@Social_gunubirlik_bot)
+              </a>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {history.map((item) => {
+                const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleString("tr-TR") : "-";
+                return (
+                  <div key={item.id} className="panel-card" style={{ marginBottom: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span style={{ fontSize: "1.1rem" }}>{item.mediaType === "video" ? "🎥" : "📸"}</span>
+                        <span style={{ fontSize: "0.85rem", color: "#9ca3af" }}>{dateStr}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {item.platforms?.facebook && (
+                          <span style={{
+                            fontSize: "0.75rem",
+                            padding: "0.2rem 0.5rem",
+                            borderRadius: "6px",
+                            background: item.platforms.facebook.success ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                            color: item.platforms.facebook.success ? "#34d399" : "#f87171",
+                            border: `1px solid ${item.platforms.facebook.success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
+                          }}>
+                            👍 Facebook: {item.platforms.facebook.success ? "Yayınlandı" : "Hata"}
+                          </span>
+                        )}
+                        {item.platforms?.instagram && (
+                          <span style={{
+                            fontSize: "0.75rem",
+                            padding: "0.2rem 0.5rem",
+                            borderRadius: "6px",
+                            background: item.platforms.instagram.success ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                            color: item.platforms.instagram.success ? "#34d399" : "#f87171",
+                            border: `1px solid ${item.platforms.instagram.success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
+                          }}>
+                            📷 Instagram: {item.platforms.instagram.success ? "Yayınlandı" : "Hata"}
+                          </span>
+                        )}
+                        {item.platforms?.linkedin && (
+                          <span style={{
+                            fontSize: "0.75rem",
+                            padding: "0.2rem 0.5rem",
+                            borderRadius: "6px",
+                            background: item.platforms.linkedin.success ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                            color: item.platforms.linkedin.success ? "#34d399" : "#f87171",
+                            border: `1px solid ${item.platforms.linkedin.success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
+                          }}>
+                            💼 LinkedIn: {item.platforms.linkedin.success ? "Yayınlandı" : "Hata"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
+                      {item.mediaUrl && (
+                        <div style={{ width: "90px", height: "90px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "#1f2937", border: "1px solid rgba(255,255,255,0.1)" }}>
+                          <img
+                            src={item.mediaUrl}
+                            alt="Gönderi Görseli"
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: "240px" }}>
+                        <p style={{
+                          fontSize: "0.875rem",
+                          lineHeight: "1.6",
+                          whiteSpace: "pre-wrap",
+                          color: "#e5e7eb",
+                          background: "rgba(0,0,0,0.25)",
+                          padding: "0.75rem",
+                          borderRadius: "8px",
+                          border: "1px solid rgba(255,255,255,0.04)"
+                        }}>
+                          {item.caption || "(Açıklama girilmedi)"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: ZAMANLANMIŞ KUYRUK (SCHEDULE) */}
+      {activeTab === "schedule" && (
+        <div>
+          {/* İstatistik & Başlık */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
+            <div>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>⏰ Zamanlanmış Paylaşım Kuyruğu</h2>
+              <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+                Otomatik saati geldiğinde Facebook, Instagram ve LinkedIn hesaplarınızda yayınlanacak gönderiler
+              </p>
+            </div>
+            <button
+              onClick={fetchSchedule}
+              disabled={scheduleLoading}
+              className="btn-secondary"
+              style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
+            >
+              {scheduleLoading ? "Yenileniyor..." : "🔄 Yenile"}
+            </button>
+          </div>
+
+          {scheduleLoading && scheduleQueue.length === 0 ? (
+            <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1rem" }}>
+              <div style={{ width: "32px", height: "32px", border: "3px solid #3b82f6", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 1rem auto" }} />
+              <p style={{ color: "#9ca3af" }}>Kuyruk kontrol ediliyor...</p>
+            </div>
+          ) : scheduleQueue.length === 0 ? (
+            <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
+              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
+              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>Kuyrukta Bekleyen Gönderi Yok</h3>
+              <p style={{ color: "#9ca3af", fontSize: "0.875rem", maxWidth: "480px", margin: "0 auto 1.5rem auto" }}>
+                Telegram botunuza fotoğraf gönderdiğinizde çıkan onay kartından <strong>"⏰ Akşam 20:00"</strong> veya <strong>"⏰ 1 Saat Sonra"</strong> butonlarına tıklayarak gönderilerinizi otomatik sıraya alabilirsiniz.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {scheduleQueue.map((item) => {
+                const targetDate = new Date(item.scheduledAt);
+                const remainingMinutes = Math.max(0, Math.round((item.scheduledAt - Date.now()) / 60000));
+                return (
+                  <div key={item.id} className="panel-card" style={{ marginBottom: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span style={{ fontSize: "1.2rem" }}>⏰</span>
+                        <div>
+                          <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#fbbf24" }}>
+                            {targetDate.toLocaleString("tr-TR")}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                            {remainingMinutes > 0 ? `Yaklaşık ${remainingMinutes} dakika sonra yayınlanacak` : "Zamanı geldi, worker yayınlıyor..."}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <span style={{
+                          fontSize: "0.75rem",
+                          padding: "0.25rem 0.6rem",
+                          borderRadius: "6px",
+                          background: item.applyWatermark ? "rgba(16, 185, 129, 0.15)" : "rgba(156, 163, 175, 0.15)",
+                          color: item.applyWatermark ? "#34d399" : "#9ca3af",
+                          border: `1px solid ${item.applyWatermark ? "rgba(16, 185, 129, 0.3)" : "rgba(156, 163, 175, 0.2)"}`
+                        }}>
+                          🎨 Filigran: {item.applyWatermark ? "Açık" : "Kapalı"}
+                        </span>
+                        <button
+                          onClick={() => cancelScheduledItem(item.id)}
+                          className="btn-secondary"
+                          style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem", color: "#f87171", borderColor: "rgba(239, 68, 68, 0.3)" }}
+                        >
+                          ❌ İptal Et
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      fontSize: "0.875rem",
+                      lineHeight: "1.6",
+                      whiteSpace: "pre-wrap",
+                      color: "#e5e7eb",
+                      background: "rgba(0,0,0,0.25)",
+                      padding: "0.75rem",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(255,255,255,0.04)"
+                    }}>
+                      {item.caption || "(Açıklama girilmedi)"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: YAPAY ZEKA STÜDYOSU (AI STUDIO) */}
+      {activeTab === "aistudio" && (
+        <div>
+          <div className="panel-card">
+            <div className="panel-header">
+              <div>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>🎨 Tamamen Ücretsiz AI Görsel & Post Stüdyosu</h2>
+                <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+                  Herhangi bir API key veya üyelik gerektirmeden hayalinizdeki gezi görselini, Türkçe başlığını ve etiketlerini tek tıkla üretin
+                </p>
+              </div>
+              <span className="badge-connected">Sınırsız / 100% Ücretsiz (FLUX.1)</span>
+            </div>
+
+            {/* Prompt Girişi */}
+            <div className="form-group">
+              <label className="form-label">Ne Görmek İstiyorsunuz? (Konu / İstek)</label>
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Örn: Kapadokya gün batımı sıcak hava balonları vadinin üzerinden yükseliyor, profesyonel seyahat fotoğrafı"
+                className="form-input"
+                rows={3}
+                style={{ resize: "vertical" }}
+              />
+              {/* İlham Hapları */}
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                {[
+                  "Kapadokya gün batımı sıcak hava balonları",
+                  "Kaş Kaputaş plajı turkuaz deniz ve kayalıklar",
+                  "Karadeniz Ayder yaylası sisli sabah ahşap evler",
+                  "Bolu Yedigöller sonbahar yaprakları ve göl",
+                  "Ege sahilinde gün batımı kahve keyfi",
+                ].map((sample, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setAiPrompt(sample)}
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "9999px",
+                      padding: "0.25rem 0.65rem",
+                      fontSize: "0.75rem",
+                      color: "#9ca3af",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ✨ {sample}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Format Seçici & Üret Butonu */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", marginTop: "1.25rem" }}>
+              <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                <label style={{ fontSize: "0.875rem", color: "#d1d5db", display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="aiFormat"
+                    value="feed"
+                    checked={aiFormat === "feed"}
+                    onChange={() => setAiFormat("feed")}
+                    style={{ accentColor: "#3b82f6" }}
+                  />
+                  📌 Akış Gönderisi (1:1 Kare)
+                </label>
+                <label style={{ fontSize: "0.875rem", color: "#d1d5db", display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="aiFormat"
+                    value="story"
+                    checked={aiFormat === "story"}
+                    onChange={() => setAiFormat("story")}
+                    style={{ accentColor: "#3b82f6" }}
+                  />
+                  📱 Instagram Hikayesi (9:16 Dikey)
+                </label>
+              </div>
+
+              <button
+                onClick={handleGenerateAi}
+                disabled={aiLoading || !aiPrompt.trim()}
+                className="btn-primary"
+                style={{ background: "#8b5cf6", fontSize: "0.9rem", padding: "0.6rem 1.5rem" }}
+              >
+                {aiLoading ? "🎨 Yapay Zeka Çiziyor (10-15 sn)..." : "⚡ Görsel & Başlık Üret"}
+              </button>
+            </div>
+          </div>
+
+          {/* AI Sonuç Önizleme Kartı */}
+          {aiResult && (
+            <div className="panel-card" style={{ borderColor: "rgba(139, 92, 246, 0.4)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "0.75rem" }}>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: "600", color: "#c084fc" }}>
+                  ✨ Üretilen Gönderi Önizlemesi ({aiResult.format === "story" ? "Instagram Story 9:16" : "Post 1:1"})
+                </h3>
+                <span className="badge-connected">Günübirlik Filigranı Eklendi</span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem", alignItems: "flex-start" }}>
+                {/* Görsel */}
+                <div style={{ textAlign: "center", background: "#0b0f19", padding: "0.5rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <img
+                    src={aiResult.imageBase64}
+                    alt="AI Generated Visual"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: aiResult.format === "story" ? "460px" : "360px",
+                      borderRadius: "8px",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+
+                {/* Açıklama & Paylaşım Butonu */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Yapay Zeka Tarafından Yazılan Başlık & Etiketler</label>
+                    <textarea
+                      value={aiResult.caption}
+                      onChange={(e) => setAiResult({ ...aiResult, caption: e.target.value })}
+                      className="form-input"
+                      rows={7}
+                      style={{ lineHeight: "1.6", resize: "vertical" }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                    <button
+                      onClick={handlePublishAiPost}
+                      disabled={aiPublishLoading}
+                      className="btn-primary"
+                      style={{ flex: 1, background: "#2563eb" }}
+                    >
+                      {aiPublishLoading ? "Paylaşılıyor..." : "🚀 Facebook & Instagram'da Paylaş"}
+                    </button>
+                    <a
+                      href="https://t.me/Social_gunubirlik_bot"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-secondary"
+                      style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      ✈️ Telegram'a Git
+                    </a>
+                  </div>
+
+                  {aiPublishStatus && (
+                    <div style={{
+                      padding: "0.75rem",
+                      borderRadius: "8px",
+                      fontSize: "0.85rem",
+                      background: aiPublishStatus.startsWith("✅") ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                      color: aiPublishStatus.startsWith("✅") ? "#34d399" : "#f87171"
+                    }}>
+                      {aiPublishStatus}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: OTOMATİK YORUM & YANITLAMA (AUTO-REPLY) */}
+      {activeTab === "autoreply" && (
+        <div>
+          {/* Başlık & Tetikleyici */}
+          <div className="panel-card">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+              <div>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>💬 Otomatik Yorum & DM Yanıtlama (Auto-Reply)</h2>
+                <p style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: "0.2rem" }}>
+                  Instagram ve Facebook gönderilerinizin altına gelen "fiyat nedir?", "neresi burası?", "detay alabilir miyim?" yorumlarına anında akıllı yanıt verin
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button
+                  onClick={triggerAutoReplyCheck}
+                  className="btn-primary"
+                  style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
+                >
+                  🔍 Şimdi Yorumları Tara & Yanıtla
+                </button>
+                <button
+                  onClick={fetchAutoReply}
+                  disabled={autoReplyLoading}
+                  className="btn-secondary"
+                  style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
+                >
+                  🔄 Yenile
+                </button>
+              </div>
+            </div>
+
+            {autoReplyCheckStatus && (
+              <div style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "8px", background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", fontSize: "0.85rem" }}>
+                ℹ️ {autoReplyCheckStatus}
+              </div>
+            )}
+          </div>
+
+          {/* Kurallar Listesi */}
+          <div className="panel-card">
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" }}>
+              📋 Aktif Yanıt Kuralları ({autoReplyRules.length})
+            </h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {autoReplyRules.map((rule) => (
+                <div
+                  key={rule.id}
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "12px",
+                    padding: "1rem",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: "1rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: "260px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.5rem" }}>
+                      <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{rule.name}</span>
+                      <span style={{
+                        fontSize: "0.7rem",
+                        padding: "0.15rem 0.5rem",
+                        borderRadius: "9999px",
+                        background: rule.enabled ? "rgba(16, 185, 129, 0.15)" : "rgba(156, 163, 175, 0.15)",
+                        color: rule.enabled ? "#34d399" : "#9ca3af"
+                      }}>
+                        {rule.enabled ? "Aktif" : "Pasif"}
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginBottom: "0.6rem" }}>
+                      {rule.keywords.map((kw: string, i: number) => (
+                        <span key={i} style={{ fontSize: "0.75rem", background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", padding: "0.15rem 0.5rem", borderRadius: "6px" }}>
+                          #{kw}
+                        </span>
+                      ))}
+                    </div>
+
+                    <p style={{ fontSize: "0.85rem", color: "#e5e7eb", background: "rgba(0,0,0,0.3)", padding: "0.6rem", borderRadius: "8px", margin: 0 }}>
+                      💬 <em>"{rule.reply}"</em>
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                    <button
+                      onClick={() => toggleRule(rule.id)}
+                      className="btn-secondary"
+                      style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}
+                    >
+                      {rule.enabled ? "Devre Dışı Bırak" : "Etkinleştir"}
+                    </button>
+                    <button
+                      onClick={() => deleteRule(rule.id)}
+                      className="btn-secondary"
+                      style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem", color: "#f87171", borderColor: "rgba(239,68,68,0.3)" }}
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Yeni Kural Ekleme Formu */}
+          <div className="panel-card">
+            <h3 style={{ fontSize: "1.05rem", fontWeight: "600", marginBottom: "0.75rem" }}>➕ Yeni Otomatik Yanıt Kuralı Ekle</h3>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "1rem" }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Kural Adı</label>
+                <input
+                  type="text"
+                  value={newRuleName}
+                  onChange={(e) => setNewRuleName(e.target.value)}
+                  placeholder="Örn: İletişim & Telefon Soruları"
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Tetikleyici Kelimeler (Virgülle Ayırın)</label>
+                <input
+                  type="text"
+                  value={newRuleKeywords}
+                  onChange={(e) => setNewRuleKeywords(e.target.value)}
+                  placeholder="telefon, whatsapp, numara, ara"
+                  className="form-input"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Gönderilecek Otomatik Yanıt Metni</label>
+              <textarea
+                value={newRuleReply}
+                onChange={(e) => setNewRuleReply(e.target.value)}
+                placeholder="Örn: Bize 0850 ... numarasından veya profildeki WhatsApp hattımızdan 7/24 ulaşabilirsiniz! 📞"
+                className="form-input"
+                rows={2}
+              />
+            </div>
+
+            <button onClick={addCustomRule} className="btn-primary" style={{ fontSize: "0.85rem" }}>
+              ➕ Kuralı Ekle & Kaydet
+            </button>
+          </div>
+
+          {/* Son Yanıtlanan Yorumlar */}
+          <div className="panel-card">
+            <h3 style={{ fontSize: "1.05rem", fontWeight: "600", marginBottom: "0.75rem" }}>
+              📜 Son Otomatik Yanıtlanan Yorumlar ({autoReplyHistory.length})
+            </h3>
+
+            {autoReplyHistory.length === 0 ? (
+              <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Henüz otomatik yanıt verilmiş bir yorum bulunmuyor.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {autoReplyHistory.slice(0, 15).map((rec, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      background: "rgba(0,0,0,0.25)",
+                      padding: "0.75rem",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(255,255,255,0.04)",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem", color: "#9ca3af", fontSize: "0.75rem" }}>
+                      <span>
+                        {rec.platform === "instagram" ? "📷 Instagram" : "👍 Facebook"} • <strong>{rec.authorName}</strong>
+                      </span>
+                      <span>{new Date(rec.repliedAt).toLocaleString("tr-TR")}</span>
+                    </div>
+                    <div style={{ color: "#f3f4f6", marginBottom: "0.3rem" }}>
+                      👤 Yorum: "<em>{rec.commentText}</em>"
+                    </div>
+                    <div style={{ color: "#34d399", paddingLeft: "1rem", borderLeft: "2px solid #10b981" }}>
+                      🤖 Verilen Yanıt: {rec.replyText}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -728,7 +1607,7 @@ export default function Dashboard() {
               <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>LinkedIn profil veya şirket sayfası paylaşımı</p>
             </div>
             <button
-              onClick={() => testConnection("linkedin", { accessToken: settings.linkedinAccessToken })}
+              onClick={() => testConnection("linkedin", { accessToken: settings.linkedinAccessToken, organizationId: settings.linkedinOrganizationId || "" })}
               disabled={testResults["linkedin"]?.loading || !settings.linkedinAccessToken}
               className="btn-secondary"
             >
@@ -760,6 +1639,20 @@ export default function Dashboard() {
                 {showTokens["linkedin"] ? "Gizle" : "Göster"}
               </button>
             </div>
+          </div>
+
+          <div className="form-group" style={{ marginTop: "1rem" }}>
+            <label className="form-label">Şirket Sayfası (Organization) ID (Opsiyonel)</label>
+            <input
+              type="text"
+              value={settings.linkedinOrganizationId || ""}
+              onChange={(e) => handleChange("linkedinOrganizationId", e.target.value)}
+              placeholder="Örn: 112026985 (Boş bırakılırsa kişisel profilde paylaşılır)"
+              className="form-input"
+            />
+            <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+              Şirketinizin LinkedIn admin URL&apos;sindeki rakamdır. (Örn: linkedin.com/company/<strong>112026985</strong>/admin)
+            </p>
           </div>
 
           {testResults["linkedin"]?.msg && (
@@ -859,12 +1752,132 @@ export default function Dashboard() {
       {/* TAB 6: YENİ ÖZELLİKLER & MAİL (FEATURES & SUGGESTIONS) */}
       {activeTab === "features" && (
         <div>
-          {/* E-Posta Bildirim Ayarları */}
+          {/* 1. Yapay Zeka (AI) Başlık & Hashtag Üretici */}
           <div className="panel-card">
             <div className="panel-header">
               <div>
-                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>📧 E-Posta Bildirim Sistemi (Yeni)</h2>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Her başarılı paylaşımda veya hata anında otomatik e-posta raporu alın</p>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>🤖 Yapay Zeka (AI) Başlık & Hashtag Üretici</h2>
+                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                  Google Gemini Vision modeli fotoğrafları piksel piksel inceleyip otomatik Türkçe başlık ve popüler etiketler üretir
+                </p>
+              </div>
+              <span className={settings.geminiApiKey ? "badge-connected" : "badge-disconnected"}>
+                {settings.geminiApiKey ? "Aktif" : "API Key Bekleniyor"}
+              </span>
+            </div>
+
+            <div className="form-group">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>Google Gemini API Key</label>
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#60a5fa", fontSize: "0.8rem", textDecoration: "none" }}
+                >
+                  🔗 Ücretsiz API Key Al (Google AI Studio)
+                </a>
+              </div>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showTokens["gemini"] ? "text" : "password"}
+                  value={settings.geminiApiKey || ""}
+                  onChange={(e) => handleChange("geminiApiKey" as any, e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="form-input"
+                  style={{ paddingRight: "4rem" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleVisibility("gemini")}
+                  style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "0.8rem" }}
+                >
+                  {showTokens["gemini"] ? "Gizle" : "Göster"}
+                </button>
+              </div>
+              <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.35rem" }}>
+                💡 API Key girilmediğinde sistem dahili seyahat şablon başlıklarını kullanır. Gemini API key girdiğinizde ise fotoğraftaki mekanı, havayı ve nesneleri analiz ederek özel başlık üretir.
+              </p>
+            </div>
+          </div>
+
+          {/* 2. Otomatik Logo / Filigran (Watermark) */}
+          <div className="panel-card">
+            <div className="panel-header">
+              <div>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>🎨 Otomatik Logo / Filigran (Watermark)</h2>
+                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                  Fotoğraflarınızın sağ alt köşesine "Günübirlik" rozeti basarak telif hakkınızı korur
+                </p>
+              </div>
+              <span className={settings.watermarkEnabled !== false ? "badge-connected" : "badge-disconnected"}>
+                {settings.watermarkEnabled !== false ? "Filigran Aktif" : "Devre Dışı"}
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", alignItems: "center" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1rem" }}>
+                  <input
+                    type="checkbox"
+                    id="watermarkToggle"
+                    checked={settings.watermarkEnabled !== false}
+                    onChange={(e) => setSettings((prev) => ({ ...prev, watermarkEnabled: e.target.checked }))}
+                    style={{ width: "18px", height: "18px", accentColor: "#3b82f6", cursor: "pointer" }}
+                  />
+                  <label htmlFor="watermarkToggle" style={{ fontSize: "0.9rem", color: "#f3f4f6", cursor: "pointer", fontWeight: 500 }}>
+                    Tüm paylaşılan fotoğraflara otomatik filigran bas
+                  </label>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Filigran Metni</label>
+                  <input
+                    type="text"
+                    value={settings.watermarkText || "Günübirlik"}
+                    onChange={(e) => handleChange("watermarkText" as any, e.target.value)}
+                    placeholder="Günübirlik"
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              {/* Rozet Önizleme */}
+              <div style={{
+                background: "rgba(0,0,0,0.4)",
+                padding: "1.25rem",
+                borderRadius: "12px",
+                border: "1px solid rgba(255,255,255,0.06)",
+                textAlign: "center"
+              }}>
+                <span style={{ fontSize: "0.75rem", color: "#9ca3af", display: "block", marginBottom: "0.75rem" }}>
+                  Canlı Rozet Önizlemesi (Fotoğrafın Sağ Alt Köşesi)
+                </span>
+                <div style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  background: "rgba(10, 15, 30, 0.85)",
+                  border: "1.5px solid rgba(255, 255, 255, 0.25)",
+                  borderRadius: "9999px",
+                  padding: "0.5rem 1.1rem",
+                  boxShadow: "0 6px 16px rgba(0,0,0,0.5)"
+                }}>
+                  <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 8px #10b981" }} />
+                  <span style={{ color: "#ffffff", fontWeight: 700, fontSize: "0.95rem", letterSpacing: "0.02em" }}>
+                    {settings.watermarkText || "Günübirlik"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. E-Posta Bildirim Ayarları */}
+          <div className="panel-card">
+            <div className="panel-header">
+              <div>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>📧 E-Posta Bildirim Sistemi</h2>
+                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Paylaşımlar tamamlandığında veya hata oluştuğunda e-posta raporu alın</p>
               </div>
             </div>
 
@@ -881,7 +1894,7 @@ export default function Dashboard() {
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
               <div className="form-group">
-                <label className="form-label">SMTP Sunucusu (Gmail / Yandex vb.)</label>
+                <label className="form-label">SMTP Sunucusu</label>
                 <input
                   type="text"
                   value={settings.smtpHost || ""}
@@ -915,43 +1928,59 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Eklenebilecek Diğer Süper Özellikler Listesi */}
+          {/* 4. Sisteme Eklenebilecek Gelecek Yenilikçi Özellikler */}
           <div className="panel-card">
-            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>💡 Web Sitesi & Bot İçin Yeni Özellik Önerileri</h3>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>💡 Eklenebilecek Yeni Süper Özellik Önerileri</h3>
             <p style={{ fontSize: "0.85rem", color: "#9ca3af", marginBottom: "1.25rem" }}>
-              Projenizi daha profesyonel kılmak için istediğiniz zaman ekleyebileceğimiz özellikler:
+              Zamanlayıcı, AI Başlık, Filigran ve Geçmiş başarıyla entegre edildi! İşte projenizi daha da büyütecek sonraki adım önerileri:
             </p>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>⏰</div>
-                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>Zamanlanmış Paylaşım (Scheduler)</h4>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>📱</div>
+                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>1. Instagram Hikaye (Story) & Reels Paylaşımı</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-                  Telegram'a fotoğraf attığınızda bot size <em>"Şimdi mi paylaşılsın, yoksa akşam 20:00'de mi?"</em> diye sorar ve kuyruğa alır.
+                  Sadece feed gönderisi değil; Telegram'dan video veya fotoğraf attığınızda doğrudan Instagram Story veya Reels olarak otomatik boyutlandırılıp yayınlansın.
                 </p>
               </div>
 
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>🤖</div>
-                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>Yapay Zeka (AI) İle Başlık Üretici</h4>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>👥</div>
+                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>2. Telegram Kanal & Grup Dinleyicisi</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-                  Açıklama yazmadan sadece fotoğraf atsanız bile, AI görseli tanıyıp etkileyici Türkçe başlık ve popüler hashtag'ler (#gezi #günübirlik vb.) üretir.
+                  Botu yöneticisi olduğunuz bir Telegram kanalına veya seyahat grubunuza eklersiniz. Kanala atılan her tur duyurusu otomatik tüm sosyal ağlara dağıtılır.
                 </p>
               </div>
 
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>📜</div>
-                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>Paylaşım Geçmişi & İstatistikler</h4>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>📊</div>
+                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>3. Akıllı Paylaşım Saati Önerisi (Smart Time)</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-                  Web panelinde daha önce Telegram'dan paylaşılan tüm fotoğrafların önizlemesi, beğeni ve görüntülenme sayıları listelenir.
+                  Sayfanızın takipçilerinin en aktif olduğu saatleri (örn. Cuma 19:30, Pazar 11:00) analiz ederek bot size "En yüksek etkileşim için Pazar 11:00'e zamanlayalım mı?" der.
                 </p>
               </div>
 
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>🎨</div>
-                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>Otomatik Logo / Filigran (Watermark)</h4>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>💬</div>
+                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>4. Otomatik Yorum & DM Yanıtlama (Auto-Reply)</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-                  Fotoğraflarınızın sağ alt köşesine "Günübirlik" logonuz otomatik basılarak paylaşılır; böylece görselleriniz çalınmaz.
+                  Instagram ve Facebook'ta gönderinin altına gelen "fiyat nedir?", "neresi burası?", "detay alabilir miyim?" yorumlarına anında otomatik yanıt veya DM gönderir.
+                </p>
+              </div>
+
+              <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>🌐</div>
+                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>5. Çok Dilli (Multi-Language) Paylaşım</h4>
+                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                  Yabancı turistlere hitap etmek için AI aynı gönderinin altına İngilizce, Rusça veya Almanca çevirisini ve küresel hashtag'leri otomatik ekler.
+                </p>
+              </div>
+
+              <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>🖼️</div>
+                <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>6. Çoklu Fotoğraf / Karusel (Carousel) Desteği</h4>
+                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                  Telegram'dan 5-10 fotoğrafı albüm olarak gönderdiğinizde, Instagram ve Facebook'ta kaydırmalı galeri (karusel) şeklinde paylaşır.
                 </p>
               </div>
             </div>

@@ -15,11 +15,21 @@ cloudinary.config({
 export class CloudinaryUploader {
   private readonly folder = "telegram_posts";
 
+  private ensureConfig() {
+    cloudinary.config({
+      cloud_name: config.cloudinary.cloudName,
+      api_key: config.cloudinary.apiKey,
+      api_secret: config.cloudinary.apiSecret,
+      secure: true,
+    });
+  }
+
   /**
    * Görüntüyü Cloudinary'e yükler.
    * @returns Public HTTPS URL
    */
   async uploadImage(filePath: string): Promise<string> {
+    this.ensureConfig();
     console.log(`[Cloudinary] Resim yükleniyor: ${filePath}`);
     const result = await cloudinary.uploader.upload(filePath, {
       resource_type: "image",
@@ -36,6 +46,7 @@ export class CloudinaryUploader {
    * @returns Public HTTPS URL
    */
   async uploadVideo(filePath: string): Promise<string> {
+    this.ensureConfig();
     console.log(`[Cloudinary] Video yükleniyor: ${filePath}`);
     const result = await cloudinary.uploader.upload(filePath, {
       resource_type: "video",

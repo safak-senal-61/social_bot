@@ -104,8 +104,10 @@ function makeConfig() {
     },
     get linkedin() {
       const accessToken = readEnv("LINKEDIN_ACCESS_TOKEN");
+      const organizationId = readEnv("LINKEDIN_ORGANIZATION_ID");
       return {
         accessToken,
+        organizationId,
         isConfigured: !!accessToken,
         baseUrl: "https://api.linkedin.com/v2",
       };
@@ -123,6 +125,21 @@ function makeConfig() {
     },
     get appUrl() {
       return readEnv("NEXT_PUBLIC_APP_URL", "http://localhost:3000");
+    },
+    get ai() {
+      const geminiApiKey = readEnv("GEMINI_API_KEY");
+      return {
+        geminiApiKey,
+        isConfigured: !!geminiApiKey,
+      };
+    },
+    get watermark() {
+      const enabled = readEnv("WATERMARK_ENABLED", "true");
+      const text = readEnv("WATERMARK_TEXT", "Günübirlik");
+      return {
+        enabled: enabled !== "false",
+        text,
+      };
     },
     media: {
       maxImageMb: 8,

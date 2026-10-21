@@ -4,6 +4,7 @@
 
 import { config, loadEnvFromFile } from "../lib/config";
 import { getBot } from "../lib/telegram/bot";
+import { startSchedulerWorker, stopSchedulerWorker } from "../lib/scheduler/worker";
 
 async function main() {
   loadEnvFromFile();
@@ -31,14 +32,23 @@ async function main() {
     console.log("==========================================");
     console.log("📲 Şimdi Telegram'dan botunuza mesaj veya fotoğraf gönderebilirsiniz!");
 
+    // Zamanlayıcı servisini başlat
+    startSchedulerWorker();
+
     await bot.launch();
   } catch (err) {
     console.error("❌ Bot başlatma hatası:", err);
   }
 
   // Graceful stop
-  process.once("SIGINT", () => bot.stop("SIGINT"));
-  process.once("SIGTERM", () => bot.stop("SIGTERM"));
+  process.once("SIGINT", () => {
+    stopSchedulerWorker();
+    bot.stop("SIGINT");
+  });
+  process.once("SIGTERM", () => {
+    stopSchedulerWorker();
+    bot.stop("SIGTERM");
+  });
 }
 
 main();

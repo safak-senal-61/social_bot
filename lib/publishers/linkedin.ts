@@ -23,10 +23,10 @@ export class LinkedInPublisher {
   async postPhoto(imagePath: string, caption: string): Promise<PublishResult> {
     try {
       console.log("[LinkedIn] Fotoğraf paylaşımı başlatılıyor...");
-      const personUrn = await this.getPersonUrn();
-      const { uploadUrl, assetUrn } = await this.registerImageUpload(personUrn);
+      const authorUrn = await this.getAuthorUrn();
+      const { uploadUrl, assetUrn } = await this.registerImageUpload(authorUrn);
       await this.uploadBinary(uploadUrl, imagePath);
-      const result = await this.createPost(personUrn, caption, assetUrn);
+      const result = await this.createPost(authorUrn, caption, assetUrn);
       return { platform: "linkedin", success: true, data: result };
     } catch (err) {
       return this.handleError(err);
@@ -36,8 +36,8 @@ export class LinkedInPublisher {
   async postText(caption: string): Promise<PublishResult> {
     try {
       console.log("[LinkedIn] Metin paylaşımı başlatılıyor...");
-      const personUrn = await this.getPersonUrn();
-      const result = await this.createPost(personUrn, caption);
+      const authorUrn = await this.getAuthorUrn();
+      const result = await this.createPost(authorUrn, caption);
       return { platform: "linkedin", success: true, data: result };
     } catch (err) {
       return this.handleError(err);
@@ -45,6 +45,20 @@ export class LinkedInPublisher {
   }
 
   // ── İç metodlar ─────────────────────────────────────────────────────────────
+
+  /**
+   * Yayıncının hedef URN'ini belirler.
+   * Eğer LINKEDIN_ORGANIZATION_ID tanımlıysa şirket URN'i (urn:li:organization:xxx),
+   * aksi halde kullanıcının kişisel URN'i (urn:li:person:xxx) döner.
+   */
+  private async getAuthorUrn(): Promise<string> {
+    if (config.linkedin.organizationId) {
+      const urn = `urn:li:organization:${config.linkedin.organizationId}`;
+      console.log(`[LinkedIn] Şirket Sayfası Hedef URN: ${urn}`);
+      return urn;
+    }
+    return this.getPersonUrn();
+  }
 
   /**
    * OpenID Connect userinfo endpoint'inden kullanıcı URN'ini alır.
@@ -66,14 +80,14 @@ export class LinkedInPublisher {
    * @returns upload URL ve asset URN ikilisi
    */
   private async registerImageUpload(
-    personUrn: string
+    ownerUrn: string
   ): Promise<{ uploadUrl: string; assetUrn: string }> {
     const { data } = await axios.post(
       `${this.base}/assets?action=registerUpload`,
       {
         registerUploadRequest: {
           recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
-          owner: personUrn,
+          owner: ownerUrn,
           serviceRelationships: [
             {
               relationshipType: "OWNER",
@@ -115,7 +129,7 @@ export class LinkedInPublisher {
    * UGC gönderi oluşturur.
    */
   private async createPost(
-    personUrn: string,
+    authorUrn: string,
     text: string,
     assetUrn?: string
   ): Promise<Record<string, unknown>> {
@@ -133,7 +147,7 @@ export class LinkedInPublisher {
     const { data } = await axios.post(
       `${this.base}/ugcPosts`,
       {
-        author: personUrn,
+        author: authorUrn,
         lifecycleState: "PUBLISHED",
         specificContent: {
           "com.linkedin.ugc.ShareContent": {

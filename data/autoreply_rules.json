@@ -1,0 +1,58 @@
+[
+  {
+    "id": "rule_price",
+    "name": "Fiyat & Ücret Soruları",
+    "keywords": [
+      "fiyat",
+      "ücret",
+      "ne kadar",
+      "kaç para",
+      "tl",
+      "maliyet"
+    ],
+    "reply": "Merhaba! Güncel tur fiyatlarımız, kalkış noktaları ve rezervasyon detayları için profilimizdeki bağlantıyı ziyaret edebilir veya bize DM gönderebilirsiniz! 🚌✨",
+    "enabled": true
+  },
+  {
+    "id": "rule_location",
+    "name": "Konum & Neresi Soruları",
+    "keywords": [
+      "neresi",
+      "nerede",
+      "konum",
+      "hangi şehir",
+      "hangi il",
+      "nerde"
+    ],
+    "reply": "Harika bir lokasyon! Detaylı konum bilgisi, ulaşım rehberi ve rota için profilimizdeki linke göz atabilir ya da bize DM'den yazabilirsiniz. 📍",
+    "enabled": true
+  },
+  {
+    "id": "rule_details",
+    "name": "Tur Detayı & Program",
+    "keywords": [
+      "detay",
+      "bilgi",
+      "nasıl gidilir",
+      "program",
+      "rezervasyon",
+      "kayıt"
+    ],
+    "reply": "Merhaba! Tüm gezi programını ve tur detaylarını size iletmemiz için DM'den mesaj gönderebilirsiniz. Keyifli geziler dileriz! 😊",
+    "enabled": true
+  },
+  {
+    "id": "rule_praise",
+    "name": "Övgü & Beğeni",
+    "keywords": [
+      "harika",
+      "güzel",
+      "muhteşem",
+      "süper",
+      "efsane",
+      "bayıldım"
+    ],
+    "reply": "Beğenmenize çok sevindik! Birbirinden güzel yeni rotalar ve günübirlik gezi keşifleri için takipte kalın! 🌟🌿",
+    "enabled": true
+  }
+]

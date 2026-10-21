@@ -1,0 +1,17 @@
+[
+  {
+    "id": "t_1792342563977",
+    "createdAt": "2026-10-18T16:56:03.977Z",
+    "caption": "Start",
+    "mediaType": "photo",
+    "status": "published",
+    "platforms": {
+      "facebook": {
+        "success": true
+      },
+      "linkedin": {
+        "success": false
+      }
+    }
+  }
+]

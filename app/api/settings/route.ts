@@ -19,10 +19,14 @@ export async function GET() {
         fbPageAccessToken: env.FB_PAGE_ACCESS_TOKEN || "",
         igUserId: env.IG_USER_ID || "",
         linkedinAccessToken: env.LINKEDIN_ACCESS_TOKEN || "",
+        linkedinOrganizationId: env.LINKEDIN_ORGANIZATION_ID || "",
         cloudinaryCloudName: env.CLOUDINARY_CLOUD_NAME || "",
         cloudinaryApiKey: env.CLOUDINARY_API_KEY || "",
         cloudinaryApiSecret: env.CLOUDINARY_API_SECRET || "",
         appUrl: env.NEXT_PUBLIC_APP_URL || "",
+        geminiApiKey: env.GEMINI_API_KEY || "",
+        watermarkEnabled: env.WATERMARK_ENABLED !== "false",
+        watermarkText: env.WATERMARK_TEXT || "Günübirlik",
       },
     });
   } catch (error) {
@@ -46,10 +50,14 @@ export async function POST(req: Request) {
       FB_PAGE_ACCESS_TOKEN: body.fbPageAccessToken?.trim() || "",
       IG_USER_ID: body.igUserId?.trim() || "",
       LINKEDIN_ACCESS_TOKEN: body.linkedinAccessToken?.trim() || "",
+      LINKEDIN_ORGANIZATION_ID: body.linkedinOrganizationId?.trim() || "",
       CLOUDINARY_CLOUD_NAME: body.cloudinaryCloudName?.trim() || "",
       CLOUDINARY_API_KEY: body.cloudinaryApiKey?.trim() || "",
       CLOUDINARY_API_SECRET: body.cloudinaryApiSecret?.trim() || "",
       NEXT_PUBLIC_APP_URL: body.appUrl?.trim() || "",
+      GEMINI_API_KEY: body.geminiApiKey?.trim() || "",
+      WATERMARK_ENABLED: body.watermarkEnabled === false ? "false" : "true",
+      WATERMARK_TEXT: body.watermarkText?.trim() || "Günübirlik",
     };
 
     saveEnvToFile(envUpdates);

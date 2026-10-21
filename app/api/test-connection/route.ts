@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       }
 
       case "linkedin": {
-        const { accessToken } = credentials;
+        const { accessToken, organizationId } = credentials;
         if (!accessToken) {
           return NextResponse.json({ success: false, message: "LinkedIn Access Token gereklidir." });
         }
@@ -61,9 +61,16 @@ export async function POST(req: Request) {
           headers: { Authorization: `Bearer ${accessToken}` },
           timeout: 10_000,
         });
+        const userName = res.data.name || res.data.sub;
+        if (organizationId) {
+          return NextResponse.json({
+            success: true,
+            message: `Bağlandı! Kullanıcı: ${userName} | Hedef Şirket ID: ${organizationId}`,
+          });
+        }
         return NextResponse.json({
           success: true,
-          message: `Bağlandı! Kullanıcı: ${res.data.name || res.data.sub}`,
+          message: `Bağlandı! Kullanıcı: ${userName} (Kişisel Profil)`,
         });
       }
 

@@ -85,6 +85,118 @@ export class FacebookPublisher {
     }
   }
 
+  /**
+   * Facebook Sayfasına sadece metin gönderisi paylaşır.
+   * @param message - Gönderi metni
+   */
+  async postText(message: string): Promise<PublishResult> {
+    try {
+      console.log("[Facebook] Metin gönderisi paylaşılıyor...");
+      const { data } = await axios.post(
+        `${this.base}/${this.pageId}/feed`,
+        {
+          message,
+          access_token: this.token,
+        },
+        { timeout: 30_000 }
+      );
+      console.log(`[Facebook] ✅ Metin paylaşıldı — id: ${data.id}`);
+      return { platform: "facebook", success: true, data };
+    } catch (err) {
+      return this.handleError(err);
+    }
+  }
+
+  /**
+   * Facebook Sayfasına çoklu görsel (Karusel / Fotoğraf Albümü Gönderisi) paylaşır.
+   */
+  async postCarousel(imageUrls: string[], caption: string): Promise<PublishResult> {
+    try {
+      console.log(`[Facebook] Çoklu fotoğraf gönderisi (${imageUrls.length} görsel) hazırlanıyor...`);
+      const mediaFbIds: Array<{ media_fbid: string }> = [];
+
+      for (let i = 0; i < imageUrls.length; i++) {
+        const url = imageUrls[i];
+        console.log(`[Facebook] Fotoğraf ${i + 1}/${imageUrls.length} yükleniyor (unpublished)...`);
+        const { data } = await axios.post(
+          `${this.base}/${this.pageId}/photos`,
+          {
+            url,
+            published: false,
+            access_token: this.token,
+          },
+          { timeout: 30_000 }
+        );
+        mediaFbIds.push({ media_fbid: data.id });
+      }
+
+      // Şimdi feed'e attached_media olarak hepsini tek seferde bağla
+      console.log(`[Facebook] Tüm fotoğraflar tek gönderide yayınlanıyor...`);
+      const { data } = await axios.post(
+        `${this.base}/${this.pageId}/feed`,
+        {
+          message: caption,
+          attached_media: mediaFbIds,
+          access_token: this.token,
+        },
+        { timeout: 30_000 }
+      );
+
+      console.log(`[Facebook] ✅ Çoklu gönderi paylaşıldı — id: ${data.id}`);
+      return { platform: "facebook", success: true, data };
+    } catch (err) {
+      return this.handleError(err);
+    }
+  }
+
+  /**
+   * Sayfanın son gönderilerini getirir (Auto-Reply için).
+   */
+  async getRecentPosts(limit = 10): Promise<any[]> {
+    try {
+      const { data } = await axios.get(`${this.base}/${this.pageId}/feed`, {
+        params: { fields: "id,message,created_time", limit, access_token: this.token },
+        timeout: 15_000,
+      });
+      return data.data || [];
+    } catch (err) {
+      console.warn("[Facebook] getRecentPosts hatası:", err);
+      return [];
+    }
+  }
+
+  /**
+   * Bir gönderinin altındaki yorumları listeler.
+   */
+  async getComments(postId: string): Promise<any[]> {
+    try {
+      const { data } = await axios.get(`${this.base}/${postId}/comments`, {
+        params: { fields: "id,message,from,created_time", access_token: this.token },
+        timeout: 15_000,
+      });
+      return data.data || [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  /**
+   * Bir Facebook yorumuna doğrudan yanıt yazar (Auto-reply).
+   */
+  async replyComment(commentId: string, message: string): Promise<PublishResult> {
+    try {
+      const { data } = await axios.post(
+        `${this.base}/${commentId}/comments`,
+        { message, access_token: this.token },
+        { timeout: 15_000 }
+      );
+      console.log(`[Facebook] ✅ Yoruma yanıt verildi: comment_id=${commentId}`);
+      return { platform: "facebook", success: true, data };
+    } catch (err) {
+      return this.handleError(err);
+    }
+  }
+
   private handleError(err: unknown): PublishResult {
     const message =
       err instanceof AxiosError

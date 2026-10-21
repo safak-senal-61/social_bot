@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# data & logs (runtime generated - contains sensitive data)
+data/system_logs.json
+data/replied_comments.json
+data/post_history.json
+
+# test / scratch files
+scratch_test.js
+test_*.jpg
+test_*.webp
+test_*.png
