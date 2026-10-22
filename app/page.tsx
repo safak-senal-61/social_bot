@@ -22,6 +22,12 @@ interface Settings {
   geminiApiKey?: string;
   watermarkEnabled?: boolean;
   watermarkText?: string;
+  watermarkSubtitle?: string;
+  watermarkShowText?: boolean;
+  watermarkLayout?: "pill" | "logo_only" | "text_only" | "minimal" | "pattern";
+  watermarkSize?: "small" | "medium" | "large";
+  watermarkPosition?: "bottom-right" | "bottom-left" | "top-right" | "top-left" | "center";
+  watermarkOpacity?: number;
   notificationEmail?: string;
   smtpHost?: string;
   smtpUser?: string;
@@ -53,6 +59,12 @@ export default function Dashboard() {
     geminiApiKey: "",
     watermarkEnabled: true,
     watermarkText: "Günübirlik",
+    watermarkSubtitle: "GÜNLÜK İŞ & ELEMAN",
+    watermarkShowText: true,
+    watermarkLayout: "pill",
+    watermarkSize: "medium",
+    watermarkPosition: "bottom-right",
+    watermarkOpacity: 90,
     notificationEmail: "",
     smtpHost: "",
     smtpUser: "",
@@ -1734,9 +1746,9 @@ export default function Dashboard() {
           <div className="panel-card">
             <div className="panel-header">
               <div>
-                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Otomatik Logo / Filigran (Watermark)</h2>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Otomatik Logo & Filigran Stüdyosu</h2>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-                  Tüm paylaşılan fotoğrafların sağ alt köşesine kurumsal logonuzu veya şık Günübirlik rozetini otomatik basar
+                  Tüm paylaşılan fotoğraflara logonuzu, marka metninizi, şık rozet şablonunu veya telif desenini otomatik ekler
                 </p>
               </div>
               <span className={settings.watermarkEnabled !== false ? "badge-connected" : "badge-disconnected"}>
@@ -1744,9 +1756,11 @@ export default function Dashboard() {
               </span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem", alignItems: "start" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.5rem", alignItems: "start" }}>
+              {/* Sol Sütun: Ayarlar ve Kontroller */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
+                {/* Ana Açma/Kapatma */}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                   <input
                     type="checkbox"
                     id="watermarkToggle"
@@ -1754,20 +1768,9 @@ export default function Dashboard() {
                     onChange={(e) => setSettings((prev) => ({ ...prev, watermarkEnabled: e.target.checked }))}
                     style={{ width: "18px", height: "18px", accentColor: "#5bb8ac", cursor: "pointer" }}
                   />
-                  <label htmlFor="watermarkToggle" style={{ fontSize: "0.9rem", color: "#f3f4f6", cursor: "pointer", fontWeight: 500 }}>
+                  <label htmlFor="watermarkToggle" style={{ fontSize: "0.9rem", color: "#f3f4f6", cursor: "pointer", fontWeight: 600 }}>
                     Tüm paylaşılan fotoğraflara otomatik filigran bas
                   </label>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: "1rem" }}>
-                  <label className="form-label">Filigran Metni (Şablon İçin)</label>
-                  <input
-                    type="text"
-                    value={settings.watermarkText || "Günübirlik"}
-                    onChange={(e) => handleChange("watermarkText" as any, e.target.value)}
-                    placeholder="Günübirlik"
-                    className="form-input"
-                  />
                 </div>
 
                 {/* Cihazdan Logo Yükleme Alanı */}
@@ -1775,10 +1778,9 @@ export default function Dashboard() {
                   background: "rgba(255, 255, 255, 0.03)",
                   border: "1px dashed rgba(120, 207, 195, 0.35)",
                   borderRadius: "10px",
-                  padding: "1rem",
-                  marginTop: "0.75rem"
+                  padding: "1rem"
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.4rem" }}>
                     <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#e5e7eb" }}>
                       Özel Logo (Cihazınızdan)
                     </span>
@@ -1793,8 +1795,8 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <p style={{ fontSize: "0.76rem", color: "#9ca3af", lineHeight: 1.4, marginBottom: "0.85rem" }}>
-                    Cihazınızdan PNG veya SVG formatında şeffaf logoyu yükleyin. Yüklediğiniz logo fotoğraf köşelerinde otomatik kullanılır.
+                  <p style={{ fontSize: "0.76rem", color: "#9ca3af", lineHeight: 1.4, marginBottom: "0.75rem" }}>
+                    PNG veya SVG formatında logonuzu yükleyin. Logonuz marka metninizle birlikte yatay rozette veya tek başına kullanılabilir.
                   </p>
 
                   <input
@@ -1849,103 +1851,476 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
+
+                {/* Metin Gösterilsin mi ve Metin Alanları */}
+                <div style={{
+                  background: "rgba(255, 255, 255, 0.02)",
+                  border: "1px solid rgba(255, 255, 255, 0.06)",
+                  borderRadius: "10px",
+                  padding: "1rem"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.8rem" }}>
+                    <input
+                      type="checkbox"
+                      id="showTextToggle"
+                      checked={settings.watermarkShowText !== false}
+                      onChange={(e) => setSettings((prev) => ({ ...prev, watermarkShowText: e.target.checked }))}
+                      style={{ width: "16px", height: "16px", accentColor: "#5bb8ac", cursor: "pointer" }}
+                    />
+                    <label htmlFor="showTextToggle" style={{ fontSize: "0.85rem", color: "#f3f4f6", cursor: "pointer", fontWeight: 600 }}>
+                      Logonun yanında marka adı ve alt sloganı göster
+                    </label>
+                  </div>
+
+                  {settings.watermarkShowText !== false && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: "0.78rem" }}>Ana Marka Metni</label>
+                        <input
+                          type="text"
+                          value={settings.watermarkText || "Günübirlik"}
+                          onChange={(e) => handleChange("watermarkText" as any, e.target.value)}
+                          placeholder="Günübirlik"
+                          className="form-input"
+                          style={{ fontSize: "0.85rem" }}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label className="form-label" style={{ fontSize: "0.78rem" }}>Alt Slogan</label>
+                        <input
+                          type="text"
+                          value={settings.watermarkSubtitle || "GÜNLÜK İŞ & ELEMAN"}
+                          onChange={(e) => handleChange("watermarkSubtitle" as any, e.target.value)}
+                          placeholder="GÜNLÜK İŞ & ELEMAN"
+                          className="form-input"
+                          style={{ fontSize: "0.85rem" }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Şekil / Düzen (Layout) Seçimi */}
+                <div>
+                  <label className="form-label" style={{ fontSize: "0.82rem", marginBottom: "0.4rem" }}>
+                    Filigran Şekli / Düzeni
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.5rem" }}>
+                    {[
+                      { id: "pill", label: "Yatay Kapsül", desc: "Cam Rozet" },
+                      { id: "logo_only", label: "Sadece Logo", desc: "Yazısız" },
+                      { id: "minimal", label: "Minimal", desc: "Şeffaf Zemin" },
+                      { id: "pattern", label: "Çapraz Desen", desc: "Tüm Görsel" },
+                    ].map((m) => {
+                      const isSel = (settings.watermarkLayout || "pill") === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setSettings((prev) => ({ ...prev, watermarkLayout: m.id as any }))}
+                          style={{
+                            background: isSel ? "rgba(91, 184, 172, 0.22)" : "rgba(255, 255, 255, 0.03)",
+                            border: `1.5px solid ${isSel ? "#5bb8ac" : "rgba(255, 255, 255, 0.08)"}`,
+                            borderRadius: "8px",
+                            padding: "0.55rem 0.6rem",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            color: isSel ? "#78cfc3" : "#d1d5db",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          <div style={{ fontSize: "0.82rem", fontWeight: 600 }}>{m.label}</div>
+                          <div style={{ fontSize: "0.7rem", color: isSel ? "#93a6aa" : "#6b7280" }}>{m.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Boyut ve Pozisyon Ayarları */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
+                  {/* Boyut */}
+                  <div>
+                    <label className="form-label" style={{ fontSize: "0.82rem", marginBottom: "0.4rem" }}>
+                      Boyut
+                    </label>
+                    <div style={{ display: "flex", gap: "0.4rem" }}>
+                      {[
+                        { id: "small", label: "Küçük" },
+                        { id: "medium", label: "Standart" },
+                        { id: "large", label: "Büyük" },
+                      ].map((s) => {
+                        const isSel = (settings.watermarkSize || "medium") === s.id;
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setSettings((prev) => ({ ...prev, watermarkSize: s.id as any }))}
+                            style={{
+                              flex: 1,
+                              background: isSel ? "rgba(91, 184, 172, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                              border: `1px solid ${isSel ? "#5bb8ac" : "rgba(255, 255, 255, 0.08)"}`,
+                              borderRadius: "6px",
+                              padding: "0.4rem",
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              color: isSel ? "#78cfc3" : "#9ca3af",
+                              cursor: "pointer"
+                            }}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Opaklık */}
+                  <div>
+                    <label className="form-label" style={{ fontSize: "0.82rem", marginBottom: "0.4rem" }}>
+                      Opaklık (%{settings.watermarkOpacity || 90})
+                    </label>
+                    <div style={{ display: "flex", gap: "0.4rem" }}>
+                      {[100, 90, 75, 50].map((op) => {
+                        const isSel = (settings.watermarkOpacity || 90) === op;
+                        return (
+                          <button
+                            key={op}
+                            type="button"
+                            onClick={() => setSettings((prev) => ({ ...prev, watermarkOpacity: op }))}
+                            style={{
+                              flex: 1,
+                              background: isSel ? "rgba(91, 184, 172, 0.2)" : "rgba(255, 255, 255, 0.03)",
+                              border: `1px solid ${isSel ? "#5bb8ac" : "rgba(255, 255, 255, 0.08)"}`,
+                              borderRadius: "6px",
+                              padding: "0.4rem",
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              color: isSel ? "#78cfc3" : "#9ca3af",
+                              cursor: "pointer"
+                            }}
+                          >
+                            %{op}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Konum / Pozisyon (5 Yönlü Grid) */}
+                <div>
+                  <label className="form-label" style={{ fontSize: "0.82rem", marginBottom: "0.4rem" }}>
+                    Görsel Üzerindeki Konumu
+                  </label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                    {[
+                      { id: "bottom-right", label: "↘️ Sağ Alt (Standart)" },
+                      { id: "bottom-left", label: "↙️ Sol Alt" },
+                      { id: "top-right", label: "↗️ Sağ Üst" },
+                      { id: "top-left", label: "↖️ Sol Üst" },
+                      { id: "center", label: "⏺️ Ortada / Merkez" },
+                    ].map((pos) => {
+                      const isSel = (settings.watermarkPosition || "bottom-right") === pos.id;
+                      return (
+                        <button
+                          key={pos.id}
+                          type="button"
+                          onClick={() => setSettings((prev) => ({ ...prev, watermarkPosition: pos.id as any }))}
+                          style={{
+                            background: isSel ? "rgba(91, 184, 172, 0.25)" : "rgba(255, 255, 255, 0.03)",
+                            border: `1px solid ${isSel ? "#5bb8ac" : "rgba(255, 255, 255, 0.08)"}`,
+                            borderRadius: "6px",
+                            padding: "0.4rem 0.65rem",
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            color: isSel ? "#78cfc3" : "#d1d5db",
+                            cursor: "pointer"
+                          }}
+                        >
+                          {pos.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
-              {/* Rozet Önizleme */}
+              {/* Sağ Sütun: Temsili Fotoğraf Üzerinde Gerçek Zamanlı İnteraktif Önizleme */}
               <div style={{
-                background: "rgba(0,0,0,0.5)",
-                padding: "1.5rem",
+                background: "rgba(0,0,0,0.4)",
+                padding: "1.25rem",
                 borderRadius: "14px",
-                border: "1px solid rgba(255,255,255,0.08)",
-                textAlign: "center"
+                border: "1px solid rgba(255,255,255,0.08)"
               }}>
-                <span style={{ fontSize: "0.75rem", color: "#9ca3af", display: "block", marginBottom: "1rem", letterSpacing: "0.5px" }}>
-                  Canlı Filigran Önizlemesi (Fotoğrafın Sağ Alt Köşesi)
-                </span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem" }}>
+                  <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#e5e7eb" }}>
+                    Canlı Fotoğraf Önizlemesi
+                  </span>
+                  <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
+                    Konum: {settings.watermarkPosition || "bottom-right"}
+                  </span>
+                </div>
 
-                {customLogoUrl ? (
+                {/* Temsili Fotoğraf Çerçevesi (16:9) */}
+                <div style={{
+                  position: "relative",
+                  width: "100%",
+                  aspectRatio: "16 / 10",
+                  background: "radial-gradient(ellipse at center, #1b2f36 0%, #081114 100%)",
+                  borderRadius: "10px",
+                  overflow: "hidden",
+                  border: "1px solid rgba(120, 207, 195, 0.25)",
+                  boxShadow: "inset 0 0 40px rgba(0,0,0,0.6)"
+                }}>
+                  {/* Fotoğraf içeriğini simüle eden grafik/desen */}
                   <div style={{
-                    display: "inline-flex",
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    background: "rgba(11, 20, 23, 0.88)",
-                    border: "1.5px solid rgba(120, 207, 195, 0.4)",
-                    borderRadius: "28px",
-                    padding: "0.7rem 1.6rem",
-                    boxShadow: "0 10px 28px rgba(0,0,0,0.6)",
-                    minWidth: "220px",
-                    minHeight: "56px"
+                    opacity: 0.25,
+                    pointerEvents: "none"
                   }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={customLogoUrl}
-                      alt="Özel Filigran Logo"
-                      style={{ maxHeight: "42px", maxWidth: "180px", objectFit: "contain" }}
-                    />
+                    <div style={{ fontSize: "2.2rem" }}>📷</div>
+                    <div style={{ fontSize: "0.75rem", letterSpacing: "1px", color: "#78cfc3", marginTop: "4px" }}>
+                      GÜNÜBİRLİK İŞ PAYLAŞIMI
+                    </div>
                   </div>
-                ) : (
-                  <div style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.85rem",
-                    background: "linear-gradient(135deg, rgba(11, 20, 23, 0.95) 0%, rgba(20, 36, 41, 0.92) 100%)",
-                    border: "1.5px solid rgba(120, 207, 195, 0.45)",
-                    borderRadius: "32px",
-                    padding: "0.55rem 1.25rem 0.55rem 0.75rem",
-                    boxShadow: "0 10px 28px rgba(0, 0, 0, 0.65)"
-                  }}>
-                    {/* Sol Monogram */}
+
+                  {/* Çapraz Desen Modu Açık ise */}
+                  {settings.watermarkLayout === "pattern" ? (
                     <div style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #5bb8ac 0%, #2d7a70 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#ffffff",
-                      fontWeight: 800,
-                      fontSize: "1.1rem",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                      position: "absolute",
+                      inset: 0,
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: "1.5rem",
+                      padding: "1rem",
+                      transform: "rotate(-25deg) scale(1.2)",
+                      opacity: ((settings.watermarkOpacity || 90) / 100) * 0.4,
+                      pointerEvents: "none"
                     }}>
-                      G
+                      {Array.from({ length: 9 }).map((_, idx) => (
+                        <div key={idx} style={{ textAlign: "center" }}>
+                          <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.8rem" }}>
+                            {settings.watermarkText || "Günübirlik"}
+                          </div>
+                          <div style={{ color: "#78cfc3", fontWeight: 700, fontSize: "0.55rem" }}>
+                            {settings.watermarkSubtitle || "GÜNLÜK İŞ & ELEMAN"}
+                          </div>
+                        </div>
+                      ))}
                     </div>
+                  ) : (
+                    /* Köşe/Merkez Filigranı */
+                    <div
+                      style={{
+                        position: "absolute",
+                        ...(settings.watermarkPosition === "top-left"
+                          ? { top: "12px", left: "12px" }
+                          : settings.watermarkPosition === "top-right"
+                          ? { top: "12px", right: "12px" }
+                          : settings.watermarkPosition === "bottom-left"
+                          ? { bottom: "12px", left: "12px" }
+                          : settings.watermarkPosition === "center"
+                          ? { top: "50%", left: "50%", transform: "translate(-50%, -50%)" }
+                          : { bottom: "12px", right: "12px" }),
+                        opacity: (settings.watermarkOpacity || 90) / 100,
+                        transform:
+                          settings.watermarkPosition === "center"
+                            ? `translate(-50%, -50%) scale(${
+                                settings.watermarkSize === "small" ? 0.8 : settings.watermarkSize === "large" ? 1.2 : 1
+                              })`
+                            : `scale(${
+                                settings.watermarkSize === "small" ? 0.8 : settings.watermarkSize === "large" ? 1.2 : 1
+                              })`,
+                        transformOrigin:
+                          settings.watermarkPosition === "top-left"
+                            ? "top left"
+                            : settings.watermarkPosition === "top-right"
+                            ? "top right"
+                            : settings.watermarkPosition === "bottom-left"
+                            ? "bottom left"
+                            : settings.watermarkPosition === "center"
+                            ? "center"
+                            : "bottom right",
+                        transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)"
+                      }}
+                    >
+                      {/* 1. Sadece Logo */}
+                      {settings.watermarkLayout === "logo_only" || settings.watermarkShowText === false ? (
+                        <div style={{
+                          width: "48px",
+                          height: "48px",
+                          borderRadius: "50%",
+                          background: "rgba(11, 20, 23, 0.92)",
+                          border: "1.5px solid rgba(120, 207, 195, 0.5)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "0 8px 20px rgba(0,0,0,0.6)"
+                        }}>
+                          {customLogoUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={customLogoUrl}
+                              alt="Logo"
+                              style={{ maxHeight: "30px", maxWidth: "30px", objectFit: "contain" }}
+                            />
+                          ) : (
+                            <span style={{ color: "#ffffff", fontWeight: 800, fontSize: "1.1rem" }}>G</span>
+                          )}
+                        </div>
+                      ) : settings.watermarkLayout === "minimal" ? (
+                        /* 2. Minimal Şeffaf Zemin */
+                        <div style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.55rem",
+                          textShadow: "0 2px 8px rgba(0,0,0,0.9)"
+                        }}>
+                          {customLogoUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={customLogoUrl}
+                              alt="Logo"
+                              style={{ maxHeight: "30px", maxWidth: "30px", objectFit: "contain" }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: "26px",
+                              height: "26px",
+                              borderRadius: "50%",
+                              background: "#5bb8ac",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#fff",
+                              fontWeight: 800,
+                              fontSize: "0.85rem"
+                            }}>
+                              G
+                            </div>
+                          )}
+                          <div style={{ textAlign: "left" }}>
+                            <div style={{
+                              color: "#ffffff",
+                              fontWeight: 800,
+                              fontSize: "0.95rem",
+                              letterSpacing: "0.8px",
+                              lineHeight: 1.15,
+                              fontFamily: "'Plus Jakarta Sans', sans-serif"
+                            }}>
+                              {settings.watermarkText || "Günübirlik"}
+                            </div>
+                            <div style={{
+                              color: "#78cfc3",
+                              fontWeight: 700,
+                              fontSize: "0.62rem",
+                              letterSpacing: "1.4px",
+                              fontFamily: "'Plus Jakarta Sans', sans-serif"
+                            }}>
+                              {settings.watermarkSubtitle || "GÜNLÜK İŞ & ELEMAN"}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* 3. Standart Yatay Kapsül Rozet (Hem Logo Hem Yazı Birlikte) */
+                        <div style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          background: "linear-gradient(135deg, rgba(11, 20, 23, 0.94) 0%, rgba(20, 36, 41, 0.90) 100%)",
+                          border: "1.5px solid rgba(120, 207, 195, 0.5)",
+                          borderRadius: "32px",
+                          padding: "0.45rem 1rem 0.45rem 0.55rem",
+                          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.7)"
+                        }}>
+                          {/* Sol Logo / Monogram Yuvası */}
+                          <div style={{
+                            width: "34px",
+                            height: "34px",
+                            borderRadius: "50%",
+                            background: customLogoUrl ? "rgba(255, 255, 255, 0.08)" : "linear-gradient(135deg, #5bb8ac 0%, #2d7a70 100%)",
+                            border: customLogoUrl ? "1px solid rgba(120, 207, 195, 0.3)" : "none",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            overflow: "hidden"
+                          }}>
+                            {customLogoUrl ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={customLogoUrl}
+                                alt="Özel Logo"
+                                style={{ maxHeight: "24px", maxWidth: "24px", objectFit: "contain" }}
+                              />
+                            ) : (
+                              <span style={{ color: "#ffffff", fontWeight: 800, fontSize: "1rem" }}>G</span>
+                            )}
+                          </div>
 
-                    {/* Metinler */}
-                    <div style={{ textAlign: "left" }}>
-                      <div style={{
-                        color: "#ffffff",
-                        fontWeight: 800,
-                        fontSize: "0.98rem",
-                        letterSpacing: "0.8px",
-                        lineHeight: 1.15,
-                        fontFamily: "'Plus Jakarta Sans', 'Montserrat', 'Inter', sans-serif"
-                      }}>
-                        {settings.watermarkText || "Günübirlik"}
-                      </div>
-                      <div style={{
-                        color: "#93a6aa",
-                        fontWeight: 700,
-                        fontSize: "0.62rem",
-                        letterSpacing: "1.4px",
-                        marginTop: "2px",
-                        fontFamily: "'Plus Jakarta Sans', 'Montserrat', 'Inter', sans-serif"
-                      }}>
-                        GÜNLÜK İŞ & ELEMAN
-                      </div>
+                          {/* Marka Adı ve Alt Başlık */}
+                          <div style={{ textAlign: "left" }}>
+                            <div style={{
+                              color: "#ffffff",
+                              fontWeight: 800,
+                              fontSize: "0.92rem",
+                              letterSpacing: "0.8px",
+                              lineHeight: 1.15,
+                              fontFamily: "'Plus Jakarta Sans', sans-serif"
+                            }}>
+                              {settings.watermarkText || "Günübirlik"}
+                            </div>
+                            <div style={{
+                              color: "#93a6aa",
+                              fontWeight: 700,
+                              fontSize: "0.6rem",
+                              letterSpacing: "1.3px",
+                              marginTop: "2px",
+                              fontFamily: "'Plus Jakarta Sans', sans-serif"
+                            }}>
+                              {settings.watermarkSubtitle || "GÜNLÜK İŞ & ELEMAN"}
+                            </div>
+                          </div>
+
+                          {/* Sağ Durum Işığı */}
+                          <div style={{
+                            marginLeft: "0.3rem",
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "50%",
+                            background: "#5bb8ac",
+                            boxShadow: "0 0 6px #5bb8ac"
+                          }} />
+                        </div>
+                      )}
                     </div>
+                  )}
+                </div>
 
-                    {/* Sağ Durum Işığı */}
-                    <div style={{
-                      marginLeft: "0.4rem",
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
+                <div style={{ marginTop: "0.85rem", textAlign: "center" }}>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="btn"
+                    style={{
                       background: "#5bb8ac",
-                      boxShadow: "0 0 8px #5bb8ac"
-                    }} />
-                  </div>
-                )}
+                      color: "#0b1417",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      padding: "0.5rem 1.4rem",
+                      borderRadius: "8px",
+                      cursor: saving ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {saving ? "Kaydediliyor..." : "💾 Filigran Ayarlarını Kaydet"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

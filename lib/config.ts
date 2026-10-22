@@ -136,9 +136,34 @@ function makeConfig() {
     get watermark() {
       const enabled = readEnv("WATERMARK_ENABLED", "true");
       const text = readEnv("WATERMARK_TEXT", "Günübirlik");
+      const subtitle = readEnv("WATERMARK_SUBTITLE", "GÜNLÜK İŞ & ELEMAN");
+      const showText = readEnv("WATERMARK_SHOW_TEXT", "true") !== "false";
+      const layout = (readEnv("WATERMARK_LAYOUT", "pill") || "pill") as
+        | "pill"
+        | "logo_only"
+        | "text_only"
+        | "minimal"
+        | "pattern";
+      const size = (readEnv("WATERMARK_SIZE", "medium") || "medium") as
+        | "small"
+        | "medium"
+        | "large";
+      const position = (readEnv("WATERMARK_POSITION", "bottom-right") || "bottom-right") as
+        | "bottom-right"
+        | "bottom-left"
+        | "top-right"
+        | "top-left"
+        | "center";
+      const opacity = Math.min(100, Math.max(10, parseInt(readEnv("WATERMARK_OPACITY", "90"), 10) || 90));
       return {
         enabled: enabled !== "false",
         text,
+        subtitle,
+        showText,
+        layout,
+        size,
+        position,
+        opacity,
       };
     },
     media: {

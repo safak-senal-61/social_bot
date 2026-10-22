@@ -28,6 +28,12 @@ async function GETHandler() {
         geminiApiKey: env.GEMINI_API_KEY || "",
         watermarkEnabled: env.WATERMARK_ENABLED !== "false",
         watermarkText: env.WATERMARK_TEXT || "Günübirlik",
+        watermarkSubtitle: env.WATERMARK_SUBTITLE || "GÜNLÜK İŞ & ELEMAN",
+        watermarkShowText: env.WATERMARK_SHOW_TEXT !== "false",
+        watermarkLayout: env.WATERMARK_LAYOUT || "pill",
+        watermarkSize: env.WATERMARK_SIZE || "medium",
+        watermarkPosition: env.WATERMARK_POSITION || "bottom-right",
+        watermarkOpacity: parseInt(env.WATERMARK_OPACITY || "90", 10) || 90,
       },
     });
   } catch (error) {
@@ -59,6 +65,12 @@ async function POSTHandler(req: Request) {
       GEMINI_API_KEY: body.geminiApiKey?.trim() || "",
       WATERMARK_ENABLED: body.watermarkEnabled === false ? "false" : "true",
       WATERMARK_TEXT: body.watermarkText?.trim() || "Günübirlik",
+      WATERMARK_SUBTITLE: body.watermarkSubtitle?.trim() || "GÜNLÜK İŞ & ELEMAN",
+      WATERMARK_SHOW_TEXT: body.watermarkShowText === false ? "false" : "true",
+      WATERMARK_LAYOUT: body.watermarkLayout || "pill",
+      WATERMARK_SIZE: body.watermarkSize || "medium",
+      WATERMARK_POSITION: body.watermarkPosition || "bottom-right",
+      WATERMARK_OPACITY: String(body.watermarkOpacity || 90),
     };
 
     saveEnvToFile(envUpdates);

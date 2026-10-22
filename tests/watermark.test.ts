@@ -122,3 +122,32 @@ test("POST /api/watermark/logo: dosya yükleme API'si çalışır", async () => 
   const delData = await delRes.json();
   assert.equal(delData.success, true);
 });
+
+test("applyWatermark: gelişmiş seçenekler (layout, size, position, showText) çalışır", async () => {
+  // 1. Center & Large & Pill
+  const p1 = await applyWatermark(sampleImagePath, {
+    brandText: "Günübirlik İş",
+    subtitle: "GÜNLÜK ELEMAN",
+    layout: "pill",
+    size: "large",
+    position: "center",
+    showText: true,
+  });
+  assert.ok(fs.existsSync(p1));
+
+  // 2. Pattern (çapraz telif deseni)
+  const p2 = await applyWatermark(sampleImagePath, {
+    brandText: "Günübirlik",
+    layout: "pattern",
+    opacity: 15,
+  });
+  assert.ok(fs.existsSync(p2));
+
+  // 3. Logo Only & Top-Left
+  const p3 = await applyWatermark(sampleImagePath, {
+    layout: "logo_only",
+    position: "top-left",
+    size: "small",
+  });
+  assert.ok(fs.existsSync(p3));
+});
