@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Rail from "@/components/Rail";
 import StatusNote from "@/components/StatusNote";
 import { buildRailGroups, TAB_TITLES, TAB_LEADS, type TabId } from "@/lib/ui/navigation";
@@ -90,6 +90,77 @@ export default function Dashboard() {
   const [newRuleKeywords, setNewRuleKeywords] = useState("");
   const [newRuleReply, setNewRuleReply] = useState("");
   const [newRuleName, setNewRuleName] = useState("");
+
+  // Logo / Filigran State
+  const [customLogoUrl, setCustomLogoUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoStatus, setLogoStatus] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchCustomLogo = async () => {
+    try {
+      const res = await fetch("/api/watermark/logo");
+      const data = await res.json();
+      if (data.success && data.hasLogo) {
+        setCustomLogoUrl(data.logoUrl);
+      } else {
+        setCustomLogoUrl(null);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLogoUploading(true);
+    setLogoStatus(null);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/watermark/logo", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCustomLogoUrl(data.logoUrl);
+        setLogoStatus("✅ Logo başarıyla yüklendi ve filigran yapıldı!");
+      } else {
+        setLogoStatus(`❌ Hata: ${data.error}`);
+      }
+    } catch (err: any) {
+      setLogoStatus(`❌ Yükleme hatası: ${err.message}`);
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteLogo = async () => {
+    if (!confirm("Özel logonuzu kaldırmak ve varsayılan şık şablona dönmek istiyor musunuz?")) return;
+    setLogoUploading(true);
+    setLogoStatus(null);
+    try {
+      const res = await fetch("/api/watermark/logo", {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCustomLogoUrl(null);
+        setLogoStatus("ℹ️ Varsayılan şık şablon rozete dönüldü.");
+      } else {
+        setLogoStatus(`❌ Hata: ${data.error}`);
+      }
+    } catch (err: any) {
+      setLogoStatus(`❌ Silme hatası: ${err.message}`);
+    } finally {
+      setLogoUploading(false);
+    }
+  };
 
   const fetchHistory = async () => {
     setHistoryLoading(true);
@@ -292,6 +363,7 @@ export default function Dashboard() {
     fetchHistory();
     fetchSchedule();
     fetchAutoReply();
+    fetchCustomLogo();
   }, []);
 
   const handleChange = (key: keyof Settings, val: string) => {
@@ -1664,7 +1736,7 @@ export default function Dashboard() {
               <div>
                 <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Otomatik Logo / Filigran (Watermark)</h2>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-                  Fotoğraflarınızın sağ alt köşesine "Günübirlik" rozeti basarak telif hakkınızı korur
+                  Tüm paylaşılan fotoğrafların sağ alt köşesine kurumsal logonuzu veya şık Günübirlik rozetini otomatik basar
                 </p>
               </div>
               <span className={settings.watermarkEnabled !== false ? "badge-connected" : "badge-disconnected"}>
@@ -1672,7 +1744,7 @@ export default function Dashboard() {
               </span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", alignItems: "center" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.5rem", alignItems: "start" }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1rem" }}>
                   <input
@@ -1680,15 +1752,15 @@ export default function Dashboard() {
                     id="watermarkToggle"
                     checked={settings.watermarkEnabled !== false}
                     onChange={(e) => setSettings((prev) => ({ ...prev, watermarkEnabled: e.target.checked }))}
-                    style={{ width: "18px", height: "18px", accentColor: "#3b82f6", cursor: "pointer" }}
+                    style={{ width: "18px", height: "18px", accentColor: "#5bb8ac", cursor: "pointer" }}
                   />
                   <label htmlFor="watermarkToggle" style={{ fontSize: "0.9rem", color: "#f3f4f6", cursor: "pointer", fontWeight: 500 }}>
                     Tüm paylaşılan fotoğraflara otomatik filigran bas
                   </label>
                 </div>
 
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Filigran Metni</label>
+                <div className="form-group" style={{ marginBottom: "1rem" }}>
+                  <label className="form-label">Filigran Metni (Şablon İçin)</label>
                   <input
                     type="text"
                     value={settings.watermarkText || "Günübirlik"}
@@ -1697,34 +1769,183 @@ export default function Dashboard() {
                     className="form-input"
                   />
                 </div>
+
+                {/* Cihazdan Logo Yükleme Alanı */}
+                <div style={{
+                  background: "rgba(255, 255, 255, 0.03)",
+                  border: "1px dashed rgba(120, 207, 195, 0.35)",
+                  borderRadius: "10px",
+                  padding: "1rem",
+                  marginTop: "0.75rem"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#e5e7eb" }}>
+                      Özel Logo (Cihazınızdan)
+                    </span>
+                    {customLogoUrl ? (
+                      <span style={{ fontSize: "0.72rem", background: "rgba(91, 184, 172, 0.2)", color: "#78cfc3", padding: "0.15rem 0.5rem", borderRadius: "9999px", border: "1px solid rgba(120, 207, 195, 0.4)" }}>
+                        Özel Logo Aktif
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: "0.72rem", background: "rgba(255, 255, 255, 0.05)", color: "#9ca3af", padding: "0.15rem 0.5rem", borderRadius: "9999px" }}>
+                        Şablon Rozet Aktif
+                      </span>
+                    )}
+                  </div>
+
+                  <p style={{ fontSize: "0.76rem", color: "#9ca3af", lineHeight: 1.4, marginBottom: "0.85rem" }}>
+                    Cihazınızdan PNG veya SVG formatında şeffaf logoyu yükleyin. Yüklediğiniz logo fotoğraf köşelerinde otomatik kullanılır.
+                  </p>
+
+                  <input
+                    type="file"
+                    ref={logoInputRef}
+                    onChange={handleUploadLogo}
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    style={{ display: "none" }}
+                  />
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+                    <button
+                      type="button"
+                      disabled={logoUploading}
+                      onClick={() => logoInputRef.current?.click()}
+                      className="btn"
+                      style={{
+                        background: "rgba(91, 184, 172, 0.2)",
+                        color: "#78cfc3",
+                        border: "1px solid rgba(120, 207, 195, 0.45)",
+                        fontSize: "0.82rem",
+                        padding: "0.45rem 0.9rem",
+                        cursor: logoUploading ? "not-allowed" : "pointer"
+                      }}
+                    >
+                      {logoUploading ? "Yükleniyor..." : "📁 Cihazdan Logo Seç"}
+                    </button>
+
+                    {customLogoUrl && (
+                      <button
+                        type="button"
+                        disabled={logoUploading}
+                        onClick={handleDeleteLogo}
+                        className="btn"
+                        style={{
+                          background: "rgba(239, 68, 68, 0.15)",
+                          color: "#fca5a5",
+                          border: "1px solid rgba(239, 68, 68, 0.3)",
+                          fontSize: "0.82rem",
+                          padding: "0.45rem 0.9rem",
+                          cursor: logoUploading ? "not-allowed" : "pointer"
+                        }}
+                      >
+                        🗑️ Logoyu Kaldır (Şablona Dön)
+                      </button>
+                    )}
+                  </div>
+
+                  {logoStatus && (
+                    <div style={{ marginTop: "0.6rem", fontSize: "0.78rem", color: logoStatus.startsWith("✅") ? "#6ee7b7" : "#cbd5e1" }}>
+                      {logoStatus}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Rozet Önizleme */}
               <div style={{
-                background: "rgba(0,0,0,0.4)",
-                padding: "1.25rem",
-                borderRadius: "12px",
-                border: "1px solid rgba(255,255,255,0.06)",
+                background: "rgba(0,0,0,0.5)",
+                padding: "1.5rem",
+                borderRadius: "14px",
+                border: "1px solid rgba(255,255,255,0.08)",
                 textAlign: "center"
               }}>
-                <span style={{ fontSize: "0.75rem", color: "#9ca3af", display: "block", marginBottom: "0.75rem" }}>
-                  Canlı Rozet Önizlemesi (Fotoğrafın Sağ Alt Köşesi)
+                <span style={{ fontSize: "0.75rem", color: "#9ca3af", display: "block", marginBottom: "1rem", letterSpacing: "0.5px" }}>
+                  Canlı Filigran Önizlemesi (Fotoğrafın Sağ Alt Köşesi)
                 </span>
-                <div style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  background: "rgba(10, 15, 30, 0.85)",
-                  border: "1.5px solid rgba(255, 255, 255, 0.25)",
-                  borderRadius: "9999px",
-                  padding: "0.5rem 1.1rem",
-                  boxShadow: "0 6px 16px rgba(0,0,0,0.5)"
-                }}>
-                  <div style={{ width: "9px", height: "9px", borderRadius: "50%", background: "#10b981", boxShadow: "0 0 8px #10b981" }} />
-                  <span style={{ color: "#ffffff", fontWeight: 700, fontSize: "0.95rem", letterSpacing: "0.02em" }}>
-                    {settings.watermarkText || "Günübirlik"}
-                  </span>
-                </div>
+
+                {customLogoUrl ? (
+                  <div style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(11, 20, 23, 0.88)",
+                    border: "1.5px solid rgba(120, 207, 195, 0.4)",
+                    borderRadius: "28px",
+                    padding: "0.7rem 1.6rem",
+                    boxShadow: "0 10px 28px rgba(0,0,0,0.6)",
+                    minWidth: "220px",
+                    minHeight: "56px"
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={customLogoUrl}
+                      alt="Özel Filigran Logo"
+                      style={{ maxHeight: "42px", maxWidth: "180px", objectFit: "contain" }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.85rem",
+                    background: "linear-gradient(135deg, rgba(11, 20, 23, 0.95) 0%, rgba(20, 36, 41, 0.92) 100%)",
+                    border: "1.5px solid rgba(120, 207, 195, 0.45)",
+                    borderRadius: "32px",
+                    padding: "0.55rem 1.25rem 0.55rem 0.75rem",
+                    boxShadow: "0 10px 28px rgba(0, 0, 0, 0.65)"
+                  }}>
+                    {/* Sol Monogram */}
+                    <div style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #5bb8ac 0%, #2d7a70 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#ffffff",
+                      fontWeight: 800,
+                      fontSize: "1.1rem",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                    }}>
+                      G
+                    </div>
+
+                    {/* Metinler */}
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{
+                        color: "#ffffff",
+                        fontWeight: 800,
+                        fontSize: "0.98rem",
+                        letterSpacing: "0.8px",
+                        lineHeight: 1.15,
+                        fontFamily: "'Plus Jakarta Sans', 'Montserrat', 'Inter', sans-serif"
+                      }}>
+                        {settings.watermarkText || "Günübirlik"}
+                      </div>
+                      <div style={{
+                        color: "#93a6aa",
+                        fontWeight: 700,
+                        fontSize: "0.62rem",
+                        letterSpacing: "1.4px",
+                        marginTop: "2px",
+                        fontFamily: "'Plus Jakarta Sans', 'Montserrat', 'Inter', sans-serif"
+                      }}>
+                        GÜNLÜK İŞ & ELEMAN
+                      </div>
+                    </div>
+
+                    {/* Sağ Durum Işığı */}
+                    <div style={{
+                      marginLeft: "0.4rem",
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: "#5bb8ac",
+                      boxShadow: "0 0 8px #5bb8ac"
+                    }} />
+                  </div>
+                )}
               </div>
             </div>
           </div>
