@@ -138,12 +138,16 @@ export class FreeAiGenerator {
 
   /**
    * Verilen konuyu/prompt'u görsel modeli için profesyonel fotoğrafçılık detaylarıyla İngilizceye zenginleştirir.
+   * Günübirlik iş alma & iş verme platformuna uygun ticari iş gücü, usta, personel ve çalışma anı görselleri üretir.
    */
   private async enhanceVisualPrompt(prompt: string, format: "feed" | "story"): Promise<string> {
     try {
-      const instructions = `You are an expert prompt engineer for FLUX.1 photorealistic image model.
+      const instructions = `You are an expert commercial prompt engineer for FLUX.1 photorealistic image model.
+You are generating visuals for "Günübirlik", an on-demand daily labor, gig work, craftsmanship and local job recruitment platform in Turkey (daily jobs like construction workers, craftsmen, waiters, baristas, cleaning staff, couriers, warehouse workers, movers, event staff).
+
 Translate and expand the following user request into a concise 30-50 word ENGLISH prompt.
-Focus on: photorealistic travel photography, authentic Turkey scenery, stunning atmospheric golden hour lighting, cinematic composition, award-winning National Geographic style, ultra-detailed 8k.
+Focus on: authentic, dynamic, professional commercial photography, skilled daily worker in action, modern workplace in Turkey, crisp natural lighting, realistic work clothes or uniforms, clean candid shot, vibrant natural colors, ultra realistic 8k, masterwork, high quality recruitment advertisement visual.
+NO cartoon, NO 3D render, NO tourist landscapes.
 CRITICAL: Output ONLY the English prompt, no quotes, no markdown, no introductions.
 User request: "${prompt}"`;
 
@@ -159,28 +163,29 @@ User request: "${prompt}"`;
 
       const enhanced = typeof res.data === "string" ? res.data.trim() : res.data?.choices?.[0]?.message?.content?.trim();
       if (enhanced && enhanced.length > 15) {
-        return `${enhanced}, ultra realistic 8k photography, cinematic lighting, national geographic travel photo, vibrant natural colors, masterwork, highly detailed`;
+        return `${enhanced}, ultra realistic 8k photography, commercial job recruitment photo, authentic Turkish daily worker in action, clean composition, cinematic lighting, masterwork, highly detailed`;
       }
     } catch (err) {
       console.warn("[FreeAI] enhanceVisualPrompt fallback kullanılıyor:", err);
     }
 
-    // Doğrudan zenginleştirilmiş İngilizce fallback
-    return `Breathtaking professional travel photography of ${prompt}, authentic landscape, cinematic golden hour light, ultra realistic 8k, award winning national geographic photo, highly detailed, masterwork`;
+    // Doğrudan zenginleştirilmiş İngilizce fallback (Günübirlik iş & çalışma temalı)
+    return `Professional commercial photography of skilled daily workers for ${prompt}, authentic modern workplace, candid action shot, clean natural lighting, ultra realistic 8k, sharp focus, highly detailed recruitment visual`;
   }
 
   /**
-   * Konuya göre sosyal medya için hazır Türkçe başlık ve popüler etiketler üretir.
+   * Konuya göre sosyal medya için hazır Türkçe başlık ve popüler etiketler üretir (Günübirlik iş ilanları & duyurular).
    */
   async generateCaption(prompt: string): Promise<string> {
     try {
-      const instructions = `Sen "Günübirlik" isimli popüler bir sosyal medya ve seyahat platformunun içerik yöneticisisin.
-Konu: "${prompt}"
-Lütfen bu görsel/konu için Instagram ve Facebook'ta yüksek etkileşim alacak harika bir paylaşım metni oluştur:
+      const instructions = `Sen "Günübirlik" isimli günübirlik iş alma, iş verme ve yevmiyeli çalışma platformunun sosyal medya içerik yöneticisisin.
+Konu / İş İlanı: "${prompt}"
+Lütfen bu görsel ve konu için Instagram, Facebook ve LinkedIn'de iş arayanların ve işverenlerin dikkatini çekecek profesyonel, güven veren ve harekete geçiren Türkçe bir paylaşım metni oluştur:
 1. Türkçe olsun.
-2. 2-3 samimi, ilham verici ve merak uyandıran cümle içersin.
-3. Sonuna konuyla uyumlu 5-7 popüler etiket (#günübirlik #keşfet #gezi #seyahat #doğa vb.) ekle.
-4. Sadece doğrudan paylaşılacak gönderi metnini ver, başka hiçbir giriş/çıkış lafı yazma.`;
+2. İşin fırsatını, kazancını veya aciliyetini anlatan 2-3 etkileyici cümle içersin.
+3. İlgilenenlerin başvurması veya ilan vermesi için net bir çağrı (CTA) ekle (Örn: "Hemen başvurmak veya detayları öğrenmek için DM atın ya da profilimizdeki linke tıklayın!").
+4. Sonuna konuyla ve günübirlik iş konseptiyle uyumlu 5-7 popüler etiket (#günübirlik #işilanı #günlükiş #yevmiye #ekiş #elemanaranıyor #işfırsatı vb.) ekle.
+5. Sadece doğrudan paylaşılacak gönderi metnini ver, başka hiçbir giriş/çıkış lafı yazma.`;
 
       const res = await axios.post(
         "https://text.pollinations.ai/",
@@ -200,17 +205,17 @@ Lütfen bu görsel/konu için Instagram ve Facebook'ta yüksek etkileşim alacak
       console.warn("[FreeAI] generateCaption fallback kullanılıyor:", err);
     }
 
-    // Fallback şablon
-    return `Hayatın koşturmacasına kısa bir mola verip yollara düşmenin tam zamanı! Yeni rotalar, keşfedilmeyi bekleyen eşsiz manzaralar ve unutulmaz anlar için takipte kalın. ✨🌿\n\n#günübirlik #gezi #keşfet #seyahat #doğa #huzur #tatil`;
+    // Fallback şablon (İş & Yevmiye Odaklı)
+    return `Günübirlik iş fırsatları cebinizde! Günlük yevmiyeli işler, anlık eleman ihtiyaçları ve güvenilir kazanç fırsatları için Günübirlik yanınızda. Hemen başvurmak veya ilan vermek için bize DM'den ulaşabilirsiniz. 💼⚡\n\n#günübirlik #işilanı #günlükiş #yevmiye #ekiş #elemanaranıyor #işfırsatı #günlükkazanç`;
   }
 
   /**
-   * Türkçe başlığı İngilizce'ye çevirip uluslararası seyahat etiketleri ekler (Multi-Language).
+   * Türkçe başlığı İngilizce'ye çevirip uluslararası iş & kariyer etiketleri ekler (Multi-Language).
    */
   async translateToEnglish(turkishText: string): Promise<string> {
     try {
-      const instructions = `Translate this Turkish social media post to natural, engaging English for international travelers.
-Add 4-5 popular travel hashtags like #travelturkey #explore #daytrip #wanderlust at the end.
+      const instructions = `Translate this Turkish job announcement/daily work social media post to natural, professional English for international candidates and employers.
+Add 4-5 relevant job & gig hashtags like #dailywork #jobopportunity #hiring #gigworker #parttimejob at the end.
 Only output the English translation with hashtags, no other comments:
 "${turkishText}"`;
 
@@ -232,7 +237,7 @@ Only output the English translation with hashtags, no other comments:
       console.warn("[FreeAI] Çeviri hatası:", err);
     }
 
-    return `${turkishText}\n\n─── 🇬🇧 English ───\nTake a break and explore the breathtaking beauty of Turkey! Adventure and peace awaits. ✨\n\n#travelturkey #explore #daytrip #nature #holiday`;
+    return `${turkishText}\n\n─── 🇬🇧 English ───\nLooking for daily work or urgent staff? Günübirlik connects you with flexible daily job opportunities and skilled workers instantly! Send a DM to apply or post a job. 💼\n\n#dailywork #jobopportunity #hiring #gigworkers #dailygigs`;
   }
 }
 

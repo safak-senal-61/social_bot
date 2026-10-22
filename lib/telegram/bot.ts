@@ -167,7 +167,7 @@ export function getBot(): Telegraf {
         "5️⃣ *🌐 Çeviri Desteği:* Gönderilere tek tıkla İngilizce çeviri ekler.\n" +
         "6️⃣ *💬 Otomatik Yanıt:* Gönderilerinizin altındaki 'fiyat', 'neresi' yorumlarına anında cevap verir.\n\n" +
         `${statusText}\n\n` +
-        "📸 *Hemen Başlayın:* Bir fotoğraf gönderin veya `/ai Kapadokya balonlar` yazın!",
+        "📸 *Hemen Başlayın:* Bir fotoğraf gönderin veya `/ai Acil günlük garson aranıyor` yazın!",
       {
         parse_mode: "Markdown",
         reply_markup: { inline_keyboard: inlineKeyboard },
@@ -199,9 +199,9 @@ export function getBot(): Telegraf {
     if (!prompt) {
       userAiWaitState.set(ctx.from.id, { format: "feed" });
       await ctx.reply(
-        "🎨 *Yapay Zeka Görsel & Post Üretici*\n\n" +
-          "Hangi konuda bir paylaşım hazırlamak istersiniz?\n" +
-          "Lütfen konuyu yazın (Örn: *Kapadokya gün doğumu sıcak hava balonları vadide* veya *Karadeniz Ayder yaylası sisli sabah ahşap evler*):",
+        "🎨 *Yapay Zeka İş Görseli & İlan Üretici*\n\n" +
+          "Hangi iş veya ilan konusunda bir paylaşım hazırlamak istersiniz?\n" +
+          "Lütfen konuyu yazın (Örn: *Restoranda günlük çalışan güler yüzlü garson* veya *Ev temizliği yapan profesyonel yardımcı personel* veya *Depoda koli yükleyen nakliye işçisi*):",
         { parse_mode: "Markdown" }
       );
       return;
@@ -340,7 +340,7 @@ export function getBot(): Telegraf {
     await ctx.answerCbQuery();
     userAiWaitState.set(ctx.from!.id, { format: "feed" });
     await ctx.reply(
-      "🎨 Lütfen oluşturmak istediğiniz görsel ve paylaşım konusunu yazın:\n(Örn: *Kaş Kaputaş plajı turkuaz deniz ve kayalıklar*)",
+      "🎨 Lütfen oluşturmak istediğiniz iş görseli veya ilan konusunu yazın:\n(Örn: *Kafede kahve hazırlayan enerjik barista* veya *İnşaat ustası modern dairede tadilat yaparken*)",
       { parse_mode: "Markdown" }
     );
   });
@@ -349,7 +349,7 @@ export function getBot(): Telegraf {
     await ctx.answerCbQuery();
     userAiWaitState.set(ctx.from!.id, { format: "story" });
     await ctx.reply(
-      "📱 Lütfen oluşturmak istediğiniz Instagram Hikayesi konusunu yazın:\n(Örn: *Fethiye Ölüdeniz yamaç paraşütü gökyüzü manzarası*)",
+      "📱 Lütfen oluşturmak istediğiniz Instagram Hikayesi konusunu yazın:\n(Örn: *Günün acil yevmiyeli iş ilanı: Temizlik personeli aranıyor* veya *Kurye motoruyla hızlı paket teslimatı*)",
       { parse_mode: "Markdown" }
     );
   });

@@ -16,12 +16,12 @@ export async function generateCaptionFromImage(imagePath: string, customContext 
     const imageBytes = fs.readFileSync(imagePath);
     const base64Data = imageBytes.toString("base64");
 
-    const prompt = `Sen profesyonel bir sosyal medya yöneticisisin. Bu görseli detaylı incele.
-Instagram, Facebook ve LinkedIn için çok etkileyici, samimi ve dikkat çekici Türkçe bir paylaşım açıklaması yaz.
+    const prompt = `Sen "Günübirlik" isimli iş alma ve iş verme platformunun profesyonel sosyal medya yöneticisisin. Bu görseli detaylı incele.
+Instagram, Facebook ve LinkedIn için iş arayanları ve işverenleri harekete geçirecek, güven veren ve etkileyici Türkçe bir paylaşım açıklaması yaz.
 Kurallar:
 1. Türkçe yaz.
-2. 2-3 cümlelik akıcı, samimi bir metin oluştur.
-3. Sonuna konuyla ve #günübirlik #gezi #kamp #keşfet #doğa #iş konseptiyle uyumlu 4-6 popüler hashtag ekle.
+2. 2-3 cümlelik akıcı, profesyonel ve ilgi çekici bir metin oluştur.
+3. Görseldeki iş koluna ve #günübirlik #işilanı #günlükiş #yevmiye #ekiş #elemanaranıyor #işfırsatı konseptine uygun 4-6 popüler hashtag ekle.
 4. Başka hiçbir açıklama veya giriş cümlesi yazma, doğrudan paylaşılacak metni ver.
 ${customContext ? `Kullanıcının belirttiği özel bağlam: "${customContext}"` : ""}`;
 
@@ -57,9 +57,9 @@ ${customContext ? `Kullanıcının belirttiği özel bağlam: "${customContext}"
 
 function generateFallbackCaption(context = ""): string {
   const templates = [
-    "Bugünden harika bir an! Yeni yerler keşfetmek, anın tadını çıkarmak ve günü dolu dolu yaşamak gibisi yok. ✨\n\n#günübirlik #keşfet #gezi #kamp #huzur #günaydın",
-    "Günün en güzel karesi! Her adımda yeni bir deneyim, her anında ayrı bir güzellik saklı. 🌿\n\n#günübirlik #doğa #seyahat #manzara #keşifteyiz",
-    "Harika bir günden kalanlar. Enerjinizi tazeleyin, yeni rotalara doğru yola çıkın! 🚀\n\n#günübirlik #macera #haftasonu #gezelimgörelim #rota",
+    "Günübirlik iş arayanlar ve acil eleman ihtiyacı olanlar burada buluşuyor! Güvenilir yevmiyeli iş fırsatları ve anlık çalışma olanakları için profilimizdeki bağlantıyı inceleyin veya bize DM atın. 💼⚡\n\n#günübirlik #işilanı #günlükiş #yevmiye #ekiş #elemanaranıyor #işfırsatı",
+    "Gününüzü kazanca dönüştürün! İster ek gelir sağlayın, ister işletmeniz için acil personel bulun. Detaylar ve başvuru için bize hemen ulaşın. 🛠️✨\n\n#günübirlik #günlükiş #yevmiyeli #ustalarişi #garson #temizlik #nakliye #işilanları",
+    "Acil iş ve hızlı eleman çözümü Günübirlik'te! Günlük ödemeli iş ilanlarını kaçırmayın. Başvurmak için profildeki linke tıklayın. 📲🚀\n\n#günübirlik #işimvar #işarıyorum #günlükkazanç #fırsat #kariyer",
   ];
   const selected = templates[Math.floor(Math.random() * templates.length)];
   return context ? `${context}\n\n${selected}` : selected;

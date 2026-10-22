@@ -868,9 +868,9 @@ export default function Dashboard() {
           <div className="panel-card">
             <div className="panel-header">
               <div>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Tamamen Ücretsiz AI Görsel & Post Stüdyosu</h2>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Tamamen Ücretsiz AI İş Görseli & İlan Stüdyosu</h2>
                 <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
-                  Herhangi bir API key veya üyelik gerektirmeden hayalinizdeki gezi görselini, Türkçe başlığını ve etiketlerini tek tıkla üretin
+                  Herhangi bir API key gerektirmeden profesyonel iş ilanı ve çalışma anı görsellerini, Türkçe başlığını ve etiketlerini tek tıkla üretin
                 </p>
               </div>
               <span className="badge-connected">Sınırsız / 100% Ücretsiz (FLUX.1)</span>
@@ -878,11 +878,11 @@ export default function Dashboard() {
 
             {/* Prompt Girişi */}
             <div className="form-group">
-              <label className="form-label">Ne Görmek İstiyorsunuz? (Konu / İstek)</label>
+              <label className="form-label">Hangi İş Kolu veya İlan İçin Görsel İstiyorsunuz?</label>
               <textarea
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Örn: Kapadokya gün batımı sıcak hava balonları vadinin üzerinden yükseliyor, profesyonel seyahat fotoğrafı"
+                placeholder="Örn: Restoranda güler yüzlü günlük garson sipariş alırken, profesyonel iş ilanı fotoğrafı"
                 className="form-input"
                 rows={3}
                 style={{ resize: "vertical" }}
@@ -890,11 +890,12 @@ export default function Dashboard() {
               {/* İlham Hapları */}
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
                 {[
-                  "Kapadokya gün batımı sıcak hava balonları",
-                  "Kaş Kaputaş plajı turkuaz deniz ve kayalıklar",
-                  "Karadeniz Ayder yaylası sisli sabah ahşap evler",
-                  "Bolu Yedigöller sonbahar yaprakları ve göl",
-                  "Ege sahilinde gün batımı kahve keyfi",
+                  "Restoranda güler yüzlü günlük garson sipariş alırken",
+                  "Modern ev temizliği yapan profesyonel yardımcı personel",
+                  "İnşaat ustası iç mekan tadilatı ve boya yaparken",
+                  "Depoda koli yükleyen enerjik nakliye işçisi",
+                  "Motosikletli kurye hızlı paket teslimatında",
+                  "Etkinlik ve fuar karşılama personeli şık giyimli",
                 ].map((sample, idx) => (
                   <button
                     key={idx}

@@ -1,16 +1,17 @@
 [
   {
-    "id": "rule_price",
-    "name": "Fiyat & Ücret Soruları",
+    "id": "rule_wage",
+    "name": "Yevmiye & Ücret Soruları",
     "keywords": [
       "fiyat",
       "ücret",
+      "yevmiye",
       "ne kadar",
       "kaç para",
-      "tl",
-      "maliyet"
+      "maaş",
+      "günlük"
     ],
-    "reply": "Merhaba! Güncel tur fiyatlarımız, kalkış noktaları ve rezervasyon detayları için profilimizdeki bağlantıyı ziyaret edebilir veya bize DM gönderebilirsiniz! 🚌✨",
+    "reply": "Merhaba! Günlük yevmiye tutarı ve ödeme koşulları iş ilanımızın detayında yer almaktadır. Hemen başvurmak ve şartları incelemek için profilimizdeki linke tıklayabilir veya bize DM atabilirsiniz! 💼💰",
     "enabled": true
   },
   {
@@ -22,37 +23,57 @@
       "konum",
       "hangi şehir",
       "hangi il",
-      "nerde"
+      "nerde",
+      "adres"
     ],
-    "reply": "Harika bir lokasyon! Detaylı konum bilgisi, ulaşım rehberi ve rota için profilimizdeki linke göz atabilir ya da bize DM'den yazabilirsiniz. 📍",
+    "reply": "Merhaba! İşin yapılacağı ilçe ve açık adres bilgisi ilanda belirtilmiştir. Detaylar ve ulaşım tarifi için profilimizdeki linke göz atabilir ya da DM'den ulaşabilirsiniz. 📍",
     "enabled": true
   },
   {
-    "id": "rule_details",
-    "name": "Tur Detayı & Program",
+    "id": "rule_apply",
+    "name": "Başvuru & İletişim Soruları",
     "keywords": [
+      "başvuru",
+      "nasıl başvururum",
       "detay",
       "bilgi",
-      "nasıl gidilir",
-      "program",
-      "rezervasyon",
-      "kayıt"
+      "iletişim",
+      "numara",
+      "telefon",
+      "iş arıyorum",
+      "çalışmak istiyorum",
+      "ben yaparım"
     ],
-    "reply": "Merhaba! Tüm gezi programını ve tur detaylarını size iletmemiz için DM'den mesaj gönderebilirsiniz. Keyifli geziler dileriz! 😊",
+    "reply": "Merhaba! İlanımıza başvurmak veya hemen çalışmaya başlamak için bize DM'den telefon numaranızı iletebilir veya profilimizdeki başvuru butonuna dokunabilirsiniz! 📲🤝",
+    "enabled": true
+  },
+  {
+    "id": "rule_employer",
+    "name": "İşveren & Eleman Arayanlar",
+    "keywords": [
+      "eleman arıyorum",
+      "işçi lazım",
+      "usta lazım",
+      "eleman lazım",
+      "ilan vermek",
+      "yardımcı lazım"
+    ],
+    "reply": "Merhaba! İşletmeniz veya eviniz için acil günlük eleman / usta arıyorsanız, ilanınızı saniyeler içinde yayınlamak için DM'den bize yazabilir veya uygulamamızdan talep oluşturabilirsiniz! ⚡👷‍♂️",
     "enabled": true
   },
   {
     "id": "rule_praise",
-    "name": "Övgü & Beğeni",
+    "name": "Övgü & Destek",
     "keywords": [
       "harika",
       "güzel",
       "muhteşem",
       "süper",
       "efsane",
-      "bayıldım"
+      "hayırlı işler",
+      "kolay gelsin"
     ],
-    "reply": "Beğenmenize çok sevindik! Birbirinden güzel yeni rotalar ve günübirlik gezi keşifleri için takipte kalın! 🌟🌿",
+    "reply": "İlginiz ve desteğiniz için çok teşekkürler! Günlük yeni iş fırsatları ve anlık eleman ilanları için bizi takip etmeye devam edin! 🌟🚀",
     "enabled": true
   }
 ]
