@@ -3,15 +3,33 @@ import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
+export function getCustomLogoDir(): string {
+  return path.join(process.cwd(), "public", "uploads");
+}
+
+export function getCustomLogoPath(): string {
+  return path.join(getCustomLogoDir(), "custom_logo.png");
+}
+
+export function getLegacyLogoPath(): string {
+  return path.join(process.cwd(), "public", "logo.png");
+}
+
+export function findExistingLogoPath(): string | null {
+  try {
+    const custom = getCustomLogoPath();
+    if (fs.existsSync(custom)) return custom;
+    const legacy = getLegacyLogoPath();
+    if (fs.existsSync(legacy)) return legacy;
+  } catch (err) {
+    console.warn("[Watermark] Logo yolu arama hatası:", err);
+  }
+  return null;
+}
+
 export const CUSTOM_LOGO_DIR = path.join(process.cwd(), "public", "uploads");
 export const CUSTOM_LOGO_PATH = path.join(CUSTOM_LOGO_DIR, "custom_logo.png");
 export const LEGACY_LOGO_PATH = path.join(process.cwd(), "public", "logo.png");
-
-export function getCustomLogoPath(): string | null {
-  if (fs.existsSync(CUSTOM_LOGO_PATH)) return CUSTOM_LOGO_PATH;
-  if (fs.existsSync(LEGACY_LOGO_PATH)) return LEGACY_LOGO_PATH;
-  return null;
-}
 
 /**
  * Şık, modern koyu cam (dark frosted glass) rozet SVG şablonu üretir.
@@ -95,7 +113,7 @@ export async function applyWatermark(
   brandText = "Günübirlik"
 ): Promise<string> {
   const outputPath = imagePath.replace(/\.[^.]+$/, "_wm.jpg");
-  const logoPath = getCustomLogoPath();
+  const logoPath = findExistingLogoPath();
 
   const image = sharp(imagePath);
   const metadata = await image.metadata();

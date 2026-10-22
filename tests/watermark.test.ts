@@ -78,3 +78,47 @@ test("applyWatermark: özel logo varsa özel logoyu rozet ile composite eder", a
     if (hadOldLogo && fs.existsSync(backupPath)) fs.renameSync(backupPath, actualCustomLogo);
   }
 });
+
+test("POST /api/watermark/logo: dosya yükleme API'si çalışır", async () => {
+  const { POST, GET, DELETE } = await import("../app/api/watermark/logo/route");
+
+  // PNG buffer oluştur
+  const testPng = await sharp({
+    create: {
+      width: 150,
+      height: 150,
+      channels: 4,
+      background: { r: 100, g: 150, b: 200, alpha: 1 },
+    },
+  })
+    .png()
+    .toBuffer();
+
+  const formData = new FormData();
+  const file = new File([testPng], "logo.png", { type: "image/png" });
+  formData.append("file", file);
+
+  const req = new Request("http://localhost:3000/api/watermark/logo", {
+    method: "POST",
+    body: formData,
+  });
+
+  const res = await POST(req);
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.equal(data.success, true);
+  assert.ok(data.logoUrl);
+
+  // GET testi
+  const getRes = await GET(new Request("http://localhost:3000/api/watermark/logo"));
+  assert.equal(getRes.status, 200);
+  const getData = await getRes.json();
+  assert.equal(getData.success, true);
+  assert.equal(getData.hasLogo, true);
+
+  // DELETE testi
+  const delRes = await DELETE(new Request("http://localhost:3000/api/watermark/logo", { method: "DELETE" }));
+  assert.equal(delRes.status, 200);
+  const delData = await delRes.json();
+  assert.equal(delData.success, true);
+});
