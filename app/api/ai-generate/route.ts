@@ -1,9 +1,10 @@
+import { withApiLog } from "@/lib/api/with_log";
 // app/api/ai-generate/route.ts
 import { NextResponse } from "next/server";
 import fs from "fs";
 import { freeAiGenerator } from "@/lib/ai/image_generator";
 
-export async function POST(req: Request) {
+async function POSTHandler(req: Request) {
   try {
     const body = await req.json();
     const prompt = body.prompt?.trim();
@@ -34,3 +35,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }
 }
+
+export const POST = withApiLog("ai-generate", POSTHandler);

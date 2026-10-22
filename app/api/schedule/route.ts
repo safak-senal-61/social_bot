@@ -1,8 +1,9 @@
+import { withApiLog } from "@/lib/api/with_log";
 // app/api/schedule/route.ts
 import { NextResponse } from "next/server";
 import { getScheduledQueue, removeScheduledItem } from "@/lib/storage/db";
 
-export async function GET() {
+async function GETHandler() {
   try {
     const queue = getScheduledQueue();
     return NextResponse.json({ success: true, queue });
@@ -11,7 +12,7 @@ export async function GET() {
   }
 }
 
-export async function DELETE(req: Request) {
+async function DELETEHandler(req: Request) {
   try {
     const { id } = await req.json();
     if (!id) {
@@ -26,3 +27,6 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }
 }
+
+export const GET = withApiLog("schedule", GETHandler);
+export const DELETE = withApiLog("schedule", DELETEHandler);

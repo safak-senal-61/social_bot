@@ -1,9 +1,10 @@
+import { withApiLog } from "@/lib/api/with_log";
 // app/api/settings/route.ts
 import { NextResponse } from "next/server";
 import { loadEnvFromFile, saveEnvToFile } from "@/lib/config";
 import { resetBot } from "@/lib/telegram/bot";
 
-export async function GET() {
+async function GETHandler() {
   try {
     const env = loadEnvFromFile();
 
@@ -37,7 +38,7 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+async function POSTHandler(req: Request) {
   try {
     const body = await req.json();
 
@@ -74,3 +75,6 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export const GET = withApiLog("settings", GETHandler);
+export const POST = withApiLog("settings", POSTHandler);

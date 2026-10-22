@@ -20,7 +20,8 @@ import { freeAiGenerator } from "@/lib/ai/image_generator";
 import { getNextSmartTime } from "@/lib/smart_time/scheduler";
 import { applyWatermark } from "@/lib/media/watermark";
 import { addHistory, addScheduledItem, type PostRecord } from "@/lib/storage/db";
-import { logEvent } from "@/lib/storage/logger";
+import { logEvent, captureError } from "@/lib/storage/logger";
+import { describeUpdate } from "@/lib/telegram/describe_update";
 import type { PublishResult } from "@/lib/types";
 
 let _bot: Telegraf | null = null;
@@ -44,7 +45,15 @@ export interface PendingDraft {
   createdAt: number;
 }
 
+export interface PendingTextDraft {
+  id: string;
+  userId: number;
+  text: string;
+  createdAt: number;
+}
+
 const pendingDrafts = new Map<string, PendingDraft>();
+const pendingTextDrafts = new Map<string, PendingTextDraft>();
 
 // Kullanıcı /ai deyip prompt beklediğimiz durumlar
 const userAiWaitState = new Map<number, { format: "feed" | "story" }>();
@@ -66,6 +75,11 @@ setInterval(() => {
       pendingDrafts.delete(id);
     }
   }
+  for (const [id, draft] of pendingTextDrafts.entries()) {
+    if (now - draft.createdAt > 3600_000) {
+      pendingTextDrafts.delete(id);
+    }
+  }
 }, 300_000);
 
 export function getBot(): Telegraf {
@@ -77,11 +91,36 @@ export function getBot(): Telegraf {
 
   _bot = new Telegraf(config.telegram.botToken);
 
+  // ── Debug günlüğü: gelen her güncellemeyi, süresini ve işleyicide oluşan hatayı kaydeder ──
+  _bot.use(async (ctx, next) => {
+    const startedAt = Date.now();
+    const info = describeUpdate(ctx.update);
+    const who = info.userId ? `kullanıcı ${info.userId}` : "bilinmeyen kullanıcı";
+    try {
+      await next();
+      logEvent(
+        "info",
+        "telegram",
+        `Telegram ${info.kind} alındı (${who})${info.preview ? `: ${info.preview}` : ""}`,
+        undefined,
+        { durationMs: Date.now() - startedAt }
+      );
+    } catch (err) {
+      captureError("telegram", `Telegram ${info.kind} işlenirken hata (${who})`, err, { preview: info.preview });
+      try {
+        await ctx.reply("⚠️ İşlem sırasında bir hata oluştu. Ayrıntı debug sayfasında.");
+      } catch {
+        // kullanıcıya bildirim gönderilemese de hata zaten kaydedildi
+      }
+    }
+  });
+
   // ── Yetki kontrolü middleware ───────────────────────────────────────────────
   _bot.use(async (ctx, next) => {
     const userId = ctx.from?.id;
     const allowed = config.telegram.allowedUserIds;
     if (allowed.length > 0 && userId && !allowed.includes(userId)) {
+      logEvent("warn", "telegram", `Yetkisiz kullanıcı engellendi: ${userId}`);
       await ctx.reply("⛔ Bu botu kullanma yetkiniz yok.");
       return;
     }
@@ -199,9 +238,102 @@ export function getBot(): Telegraf {
   _bot.action("show_help", async (ctx) => {
     await ctx.answerCbQuery();
     await ctx.reply(
-      "💡 *İpucu:* `/ai Bolu Yedigöller sonbahar renkleri` yazarak 10 saniyede hazır sosyal medya gönderisi üretebilirsiniz!",
+      "📖 *Günübirlik Sosyal Medya Botu Kullanım Kılavuzu:*\n\n" +
+        "📸 *Fotoğraf & Video Paylaşımı:*\n" +
+        "Bota tek veya 2-10 arası fotoğraf (albüm) attığınızda AI sizin için profesyonel bir başlık ve etiketler hazırlar. İster hemen yayınlayabilir, ister Akıllı Saat önerisiyle zamanlayabilirsiniz.\n\n" +
+        "🎨 *Yapay Zeka ile Görsel Üretme:*\n" +
+        "• `/ai <istediğiniz konu>`: Post formatında gerçekçi görsel + başlık üretir.\n" +
+        "• `/hikaye <istediğiniz konu>`: Instagram Story (9:16) formatında görsel üretir.\n\n" +
+        "💬 *Yorum Yanıtlama (Auto-Reply):*\n" +
+        "Facebook ve Instagram paylaşımlarınızın altındaki 'fiyat', 'neresi', 'detay' gibi sorulara web panelinde belirlediğiniz kurallara göre otomatik cevap verir.\n\n" +
+        "📝 *Yazılı Metin Gönderme:*\n" +
+        "Bota herhangi bir metin yazdığınızda metin doğrudan paylaşılmaz; size menü sunulur. İsterseniz 'Bu Metni Paylaş' butonuyla Facebook/LinkedIn'e onaylı olarak gönderebilirsiniz.",
       { parse_mode: "Markdown" }
     );
+  });
+
+  // Metin Paylaşım Onayı İsteme
+  _bot.action(/^confirm_text_(.+)$/, async (ctx) => {
+    const draftId = ctx.match[1];
+    const draft = pendingTextDrafts.get(draftId);
+    if (!draft) {
+      await ctx.answerCbQuery("Bu metnin süresi dolmuş veya bulunamadı.");
+      return;
+    }
+    await ctx.answerCbQuery();
+    await ctx.reply(
+      `⚠️ *Metin Paylaşım Onayı*\n\n` +
+        `Aşağıdaki metin sosyal medya sayfalarınızda (Facebook / LinkedIn) durum güncellemesi olarak paylaşılsın mı?\n\n` +
+        `📝 *Paylaşılacak Metin:*\n"${draft.text}"`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "✅ Evet, Hemen Paylaş", callback_data: `publish_text_${draftId}` },
+              { text: "❌ Vazgeç", callback_data: `cancel_text_${draftId}` },
+            ],
+          ],
+        },
+      }
+    );
+  });
+
+  // Metin Paylaşımını Gerçekleştir
+  _bot.action(/^publish_text_(.+)$/, async (ctx) => {
+    const draftId = ctx.match[1];
+    const draft = pendingTextDrafts.get(draftId);
+    if (!draft) {
+      await ctx.answerCbQuery("Bu metin süresi dolmuş veya iptal edilmiş.");
+      return;
+    }
+    pendingTextDrafts.delete(draftId);
+    await ctx.answerCbQuery("Metin yayınlanıyor...");
+
+    const statusMsg = await ctx.reply("⏳ Metin gönderisi yayınlanıyor...");
+    const publishTasks: Promise<PublishResult>[] = [];
+
+    if (config.facebook.isConfigured) publishTasks.push(facebookPublisher.postText(draft.text));
+    if (config.linkedin.isConfigured) publishTasks.push(linkedInPublisher.postText(draft.text));
+
+    const results = await Promise.all(publishTasks);
+    await editMsg(ctx, statusMsg.message_id, buildReport(results));
+
+    results.forEach((r) => {
+      if (r.success) {
+        logEvent("success", r.platform as any, `${r.platform.toUpperCase()} üzerinde metin paylaşımı başarılı.`);
+      } else {
+        logEvent("error", r.platform as any, `${r.platform.toUpperCase()} metin paylaşım hatası: ${r.error}`);
+      }
+    });
+
+    addHistory({
+      id: `t_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      caption: draft.text,
+      mediaType: "photo",
+      status: results.some((r) => r.success) ? "published" : "failed",
+      platforms: {
+        facebook: { success: results.find((r) => r.platform === "facebook")?.success ?? false },
+        linkedin: { success: results.find((r) => r.platform === "linkedin")?.success ?? false },
+      },
+    });
+  });
+
+  // Metin Paylaşımını İptal Et
+  _bot.action(/^cancel_text_(.+)$/, async (ctx) => {
+    const draftId = ctx.match[1];
+    pendingTextDrafts.delete(draftId);
+    await ctx.answerCbQuery("İptal edildi.");
+    if (ctx.callbackQuery.message) {
+      await ctx.telegram.editMessageText(
+        ctx.chat!.id,
+        ctx.callbackQuery.message.message_id,
+        undefined,
+        "🚫 *Metin paylaşımı iptal edildi.*",
+        { parse_mode: "Markdown" }
+      );
+    }
   });
 
   _bot.action("cmd_ai_prompt", async (ctx) => {
@@ -494,27 +626,61 @@ export function getBot(): Telegraf {
       return;
     }
 
-    // Normal metin paylaşımı
-    const statusMsg = await ctx.reply("⏳ Metin gönderisi yayınlanıyor...");
-    const publishTasks: Promise<PublishResult>[] = [];
-
-    if (config.facebook.isConfigured) publishTasks.push(facebookPublisher.postText(text));
-    if (config.linkedin.isConfigured) publishTasks.push(linkedInPublisher.postText(text));
-
-    const results = await Promise.all(publishTasks);
-    await editMsg(ctx, statusMsg.message_id, buildReport(results));
-
-    addHistory({
-      id: `t_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      caption: text,
-      mediaType: "photo",
-      status: results.some((r) => r.success) ? "published" : "failed",
-      platforms: {
-        facebook: { success: results.find((r) => r.platform === "facebook")?.success ?? false },
-        linkedin: { success: results.find((r) => r.platform === "linkedin")?.success ?? false },
-      },
+    // Metin doğrudan paylaşılmaz: Kullanıcıya karşılama, özellikler ve işlem butonları sunulur
+    const draftId = `txt_${Date.now()}`;
+    pendingTextDrafts.set(draftId, {
+      id: draftId,
+      userId: ctx.from.id,
+      text,
+      createdAt: Date.now(),
     });
+
+    const activePlatforms = [];
+    if (config.facebook.isConfigured) activePlatforms.push("Facebook (Günübirlik)");
+    if (config.instagram.isConfigured) activePlatforms.push(`Instagram (@${config.instagram.userId ? "websachat" : "Bağlı"})`);
+    if (config.linkedin.isConfigured) activePlatforms.push("LinkedIn");
+
+    const statusText = activePlatforms.length > 0
+      ? `*Aktif Platformlar:* ${activePlatforms.join(", ")}`
+      : "Henüz hiçbir sosyal medya hesabı bağlanmamış.";
+
+    const inlineKeyboard: any[][] = [
+      [
+        { text: "🎨 Ücretsiz AI Görsel & Post Üret", callback_data: "cmd_ai_prompt" },
+        { text: "📱 AI ile Instagram Hikayesi Üret", callback_data: "cmd_ai_story" },
+      ],
+      [
+        { text: "📢 Bu Metni Sosyal Medyada Paylaş", callback_data: `confirm_text_${draftId}` },
+      ],
+      [
+        { text: "📊 Durumu Kontrol Et", callback_data: "check_status" },
+        { text: "ℹ️ Özellikler Rehberi", callback_data: "show_help" },
+      ],
+    ];
+
+    if (config.facebook.pageId) {
+      inlineKeyboard.unshift([
+        { text: "👍 Facebook Sayfama Git", url: `https://facebook.com/${config.facebook.pageId}` },
+      ]);
+    }
+
+    const preview = text.length > 120 ? `${text.slice(0, 120)}...` : text;
+
+    await ctx.reply(
+      `👋 *Merhaba! Günübirlik Sosyal Medya Asistanı*\n\n` +
+        `Size nasıl yardımcı olabilirim? Aşağıdaki butonları kullanarak hemen işlem yapabilir veya bana fotoğraf / video gönderebilirsiniz.\n\n` +
+        `💬 *Yazdığınız Metin:*\n_"${preview}"_\n\n` +
+        `📌 *Neler Yapabilirsiniz?*\n` +
+        `1️⃣ *Fotoğraf / Video Gönderin:* AI otomatik başlık ve etiketler yazar, anında veya Akıllı Saate zamanlayarak paylaşabilirsiniz.\n` +
+        `2️⃣ *Çoklu Fotoğraf (Albüm):* 2-10 fotoğraf gönderdiğinizde Instagram ve Facebook'ta karusel galeri paylaşır.\n` +
+        `3️⃣ *Ücretsiz AI Post Üretici:* İstediğiniz konuda profesyonel görsel üretir (\`/ai <konu>\`).\n` +
+        `4️⃣ *Yazdığınız Metni Paylaş:* Yukarıdaki *"Bu Metni Sosyal Medyada Paylaş"* butonuna dokunarak durum olarak yayınlayabilirsiniz.\n\n` +
+        `${statusText}`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: inlineKeyboard },
+      }
+    );
   });
 
   return _bot;

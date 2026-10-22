@@ -42,6 +42,8 @@ next-env.d.ts
 
 # data & logs (runtime generated - contains sensitive data)
 data/system_logs.json
+data/system_logs.jsonl
+data/bot_heartbeat.json
 data/replied_comments.json
 data/post_history.json
 

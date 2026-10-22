@@ -1,8 +1,9 @@
+import { withApiLog } from "@/lib/api/with_log";
 // app/api/autoreply/route.ts
 import { NextResponse } from "next/server";
 import { autoReplyEngine } from "@/lib/autoreply/engine";
 
-export async function GET() {
+async function GETHandler() {
   try {
     const rules = autoReplyEngine.getRules();
     const history = autoReplyEngine.getRepliedHistory();
@@ -16,7 +17,7 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+async function POSTHandler(req: Request) {
   try {
     const body = await req.json();
 
@@ -43,3 +44,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 });
   }
 }
+
+export const GET = withApiLog("autoreply", GETHandler);
+export const POST = withApiLog("autoreply", POSTHandler);

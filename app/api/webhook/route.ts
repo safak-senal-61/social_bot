@@ -1,3 +1,4 @@
+import { withApiLog } from "@/lib/api/with_log";
 // app/api/webhook/route.ts
 // Telegram webhook endpoint — Next.js App Router API Route
 //
@@ -12,7 +13,7 @@ import { config } from "@/lib/config";
 // (Sharp ve fs modülleri Edge Runtime'da çalışmaz)
 export const runtime = "nodejs";
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   // ── Güvenlik: Secret token doğrulama ────────────────────────────────────────
   const secretHeader = req.headers.get("x-telegram-bot-api-secret-token");
   if (secretHeader !== config.telegram.secretToken) {
@@ -32,10 +33,13 @@ export async function POST(req: NextRequest) {
 }
 
 // GET isteği: webhook durumu kontrolü için
-export async function GET() {
+async function GETHandler() {
   return NextResponse.json({
     status: "running",
     bot: "Social Poster Bot",
     timestamp: new Date().toISOString(),
   });
 }
+
+export const POST = withApiLog("webhook", POSTHandler);
+export const GET = withApiLog("webhook", GETHandler);

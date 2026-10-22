@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Rail from "@/components/Rail";
+import StatusNote from "@/components/StatusNote";
+import { buildRailGroups, TAB_TITLES, TAB_LEADS, type TabId } from "@/lib/ui/navigation";
 
 interface Settings {
   telegramBotToken: string;
@@ -56,9 +59,7 @@ export default function Dashboard() {
     smtpPass: "",
   });
 
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "history" | "schedule" | "aistudio" | "autoreply" | "telegram" | "facebook" | "linkedin" | "cloudinary" | "features" | "debug"
-  >("overview");
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [scheduleQueue, setScheduleQueue] = useState<any[]>([]);
@@ -89,37 +90,6 @@ export default function Dashboard() {
   const [newRuleKeywords, setNewRuleKeywords] = useState("");
   const [newRuleReply, setNewRuleReply] = useState("");
   const [newRuleName, setNewRuleName] = useState("");
-
-  // Debug Console State
-  const [systemLogs, setSystemLogs] = useState<any[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [logFilter, setLogFilter] = useState<"all" | "error" | "success" | "telegram" | "api">("all");
-  const [autoRefreshLogs, setAutoRefreshLogs] = useState(true);
-
-  const fetchLogs = async () => {
-    setLogsLoading(true);
-    try {
-      const res = await fetch("/api/logs");
-      const data = await res.json();
-      if (data.success) setSystemLogs(data.logs || []);
-    } catch {} finally {
-      setLogsLoading(false);
-    }
-  };
-
-  const clearLogs = async () => {
-    if (!confirm("Tüm sistem loglarını silmek istediğinize emin misiniz?")) return;
-    try {
-      await fetch("/api/logs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "clear" }),
-      });
-      setSystemLogs([]);
-    } catch {
-      alert("Loglar silinemedi");
-    }
-  };
 
   const fetchHistory = async () => {
     setHistoryLoading(true);
@@ -285,17 +255,13 @@ export default function Dashboard() {
     if (activeTab === "history") fetchHistory();
     if (activeTab === "schedule") fetchSchedule();
     if (activeTab === "autoreply") fetchAutoReply();
-    if (activeTab === "debug") fetchLogs();
   }, [activeTab]);
 
-  // Debug sekmesinde açıkken otomatik 4 saniyede bir logları tazele
+  // /debug sayfasından "/?tab=history" gibi bağlantılarla gelinirse ilgili sekmeyi aç
   useEffect(() => {
-    if (activeTab !== "debug" || !autoRefreshLogs) return;
-    const interval = setInterval(() => {
-      fetchLogs();
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [activeTab, autoRefreshLogs]);
+    const tab = new URLSearchParams(window.location.search).get("tab") as TabId | null;
+    if (tab && tab in TAB_TITLES) setActiveTab(tab);
+  }, []);
 
   // Şifre alanlarının görünürlüğü
   const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
@@ -307,7 +273,7 @@ export default function Dashboard() {
   const [helpModal, setHelpModal] = useState<HelpModalContent | null>(null);
 
   // Doğrudan Web'den Test Gönderi Paylaşma
-  const [testPostText, setTestPostText] = useState("Social Poster Bot üzerinden test paylaşımı! 🚀");
+  const [testPostText, setTestPostText] = useState("Social Poster Bot üzerinden test paylaşımı! ");
   const [testPostStatus, setTestPostStatus] = useState<string | null>(null);
   const [testPostLoading, setTestPostLoading] = useState(false);
 
@@ -525,109 +491,29 @@ export default function Dashboard() {
   const isCloudinaryOk = !!(settings.cloudinaryCloudName && settings.cloudinaryApiKey && settings.cloudinaryApiSecret);
 
   return (
-    <div className="dashboard-container">
-      {/* Üst Başlık & Kaydet Butonu */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "2.2rem" }}>🤖</span>
-            <h1 style={{ fontSize: "1.75rem", fontWeight: "700", letterSpacing: "-0.02em" }}>
-              Social Poster Bot
-            </h1>
+    <div className="shell">
+      <Rail
+        groups={buildRailGroups({
+          history: history.length,
+          schedule: scheduleQueue.length,
+          autoreply: autoReplyRules.length,
+        })}
+        active={activeTab}
+        onSelect={(id) => setActiveTab(id as TabId)}
+      />
+
+      <main className="stage">
+        <header className="stage-head">
+          <div>
+            <h1>{TAB_TITLES[activeTab]}</h1>
+            <p className="stage-lead">{TAB_LEADS[activeTab]}</p>
           </div>
-          <p style={{ color: "#9ca3af", fontSize: "0.9rem", marginTop: "0.25rem" }}>
-            Telegram üzerinden sosyal medya hesaplarınıza tek tıkla otomatik paylaşım paneli
-          </p>
-        </div>
+          <button onClick={handleSave} disabled={saving} className="btn-primary">
+            {saving ? "Kaydediliyor..." : "Ayarları kaydet"}
+          </button>
+        </header>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-primary"
-        >
-          {saving ? "Kaydediliyor..." : "💾 Tüm Ayarları Kaydet"}
-        </button>
-      </div>
-
-      {/* Kayıt Bildirimi */}
-      {saveStatus && (
-        <div style={{
-          padding: "0.85rem 1.25rem",
-          borderRadius: "12px",
-          marginBottom: "1.5rem",
-          background: saveStatus.startsWith("✅") ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-          border: `1px solid ${saveStatus.startsWith("✅") ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
-          color: saveStatus.startsWith("✅") ? "#34d399" : "#f87171",
-          fontSize: "0.9rem",
-          fontWeight: 500
-        }}>
-          {saveStatus}
-        </div>
-      )}
-
-      {/* Sekmeler (Tabs) */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", overflowX: "auto", paddingBottom: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <button
-          onClick={() => setActiveTab("overview")}
-          className={`tab-btn ${activeTab === "overview" ? "active" : ""}`}
-        >
-          📊 Genel Durum
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={`tab-btn ${activeTab === "history" ? "active" : ""}`}
-        >
-          📜 Paylaşım Geçmişi {history.length > 0 && `(${history.length})`}
-        </button>
-        <button
-          onClick={() => setActiveTab("schedule")}
-          className={`tab-btn ${activeTab === "schedule" ? "active" : ""}`}
-        >
-          ⏰ Zamanlanmış Kuyruk {scheduleQueue.length > 0 && `(${scheduleQueue.length})`}
-        </button>
-        <button
-          onClick={() => setActiveTab("aistudio")}
-          className={`tab-btn ${activeTab === "aistudio" ? "active" : ""}`}
-        >
-          🎨 AI Stüdyosu (Ücretsiz)
-        </button>
-        <button
-          onClick={() => setActiveTab("autoreply")}
-          className={`tab-btn ${activeTab === "autoreply" ? "active" : ""}`}
-        >
-          💬 Otomatik Yanıt {autoReplyRules.length > 0 && `(${autoReplyRules.length})`}
-        </button>
-        <button
-          onClick={() => setActiveTab("telegram")}
-          className={`tab-btn ${activeTab === "telegram" ? "active" : ""}`}
-        >
-          ✈️ Telegram & Webhook
-        </button>
-        <button
-          onClick={() => setActiveTab("facebook")}
-          className={`tab-btn ${activeTab === "facebook" ? "active" : ""}`}
-        >
-          👍 Facebook & Instagram
-        </button>
-        <button
-          onClick={() => setActiveTab("linkedin")}
-          className={`tab-btn ${activeTab === "linkedin" ? "active" : ""}`}
-        >
-          💼 LinkedIn
-        </button>
-        <button
-          onClick={() => setActiveTab("cloudinary")}
-          className={`tab-btn ${activeTab === "cloudinary" ? "active" : ""}`}
-        >
-          ☁️ Cloudinary (CDN)
-        </button>
-        <button
-          onClick={() => setActiveTab("features")}
-          className={`tab-btn ${activeTab === "features" ? "active" : ""}`}
-        >
-          ✨ AI, Filigran & Özellikler
-        </button>
-      </div>
+        {saveStatus && <StatusNote text={saveStatus} />}
 
       {/* TAB 1: GENEL DURUM (OVERVIEW) */}
       {activeTab === "overview" && (
@@ -636,7 +522,6 @@ export default function Dashboard() {
             {/* Telegram Kartı */}
             <div className="panel-card" style={{ marginBottom: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                <span style={{ fontSize: "1.5rem" }}>✈️</span>
                 <span className={isTelegramOk ? "badge-connected" : "badge-disconnected"}>
                   {isTelegramOk ? "Bağlı" : "Eksik"}
                 </span>
@@ -650,7 +535,6 @@ export default function Dashboard() {
             {/* Facebook Kartı */}
             <div className="panel-card" style={{ marginBottom: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                <span style={{ fontSize: "1.5rem" }}>👍</span>
                 <span className={isFbOk ? "badge-connected" : "badge-disconnected"}>
                   {isFbOk ? "Bağlı" : "Eksik"}
                 </span>
@@ -664,7 +548,6 @@ export default function Dashboard() {
             {/* Instagram Kartı */}
             <div className="panel-card" style={{ marginBottom: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                <span style={{ fontSize: "1.5rem" }}>📷</span>
                 <span className={isIgOk ? "badge-connected" : "badge-disconnected"}>
                   {isIgOk ? "Bağlı" : "Pasif"}
                 </span>
@@ -678,7 +561,6 @@ export default function Dashboard() {
             {/* LinkedIn Kartı */}
             <div className="panel-card" style={{ marginBottom: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                <span style={{ fontSize: "1.5rem" }}>💼</span>
                 <span className={isLinkedinOk ? "badge-connected" : "badge-disconnected"}>
                   {isLinkedinOk ? "Bağlı" : "Pasif"}
                 </span>
@@ -694,7 +576,7 @@ export default function Dashboard() {
           {isFbOk && (
             <div className="panel-card" style={{ background: "rgba(30, 41, 59, 0.7)" }}>
               <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span>📢</span> Web Panelinden Hızlı Gönderi Paylaş (Facebook Test)
+                Web Panelinden Hızlı Gönderi Paylaş (Facebook Test)
               </h3>
               <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.75rem" }}>
                 Telegram'ı beklemeden sayfanıza doğrudan bir gönderi atıp çalışıp çalışmadığını anında görün:
@@ -715,28 +597,17 @@ export default function Dashboard() {
                   className="btn-primary"
                   style={{ background: "#2563eb", whiteSpace: "nowrap" }}
                 >
-                  {testPostLoading ? "Paylaşılıyor..." : "🚀 Sayfamda Paylaş"}
+                  {testPostLoading ? "Paylaşılıyor..." : "Sayfamda Paylaş"}
                 </button>
               </div>
 
-              {testPostStatus && (
-                <div style={{
-                  marginTop: "0.75rem",
-                  padding: "0.65rem",
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  background: testPostStatus.startsWith("✅") ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                  color: testPostStatus.startsWith("✅") ? "#34d399" : "#f87171"
-                }}>
-                  {testPostStatus}
-                </div>
-              )}
+              {testPostStatus && <StatusNote text={testPostStatus} />}
             </div>
           )}
 
           {/* Hızlı Bilgi & Kullanım */}
           <div className="panel-card">
-            <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem" }}>🚀 Bot Nasıl Kullanılır?</h3>
+            <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.75rem" }}>Bot Nasıl Kullanılır?</h3>
             <ol style={{ paddingLeft: "1.25rem", color: "#d1d5db", fontSize: "0.875rem", lineHeight: "1.8" }}>
               <li>Telegram uygulamanızdan <strong>@Social_gunubirlik_bot</strong>'u açın.</li>
               <li>Bota <code>/start</code> veya <code>/status</code> gönderin. Şık butonlar aracılığıyla sayfanızı ve durumunuzu görebilirsiniz.</li>
@@ -753,7 +624,7 @@ export default function Dashboard() {
           {/* İstatistik & Başlık */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>📜 Paylaşım Geçmişi & İstatistikler</h2>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Paylaşım Geçmişi & İstatistikler</h2>
               <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
                 Telegram üzerinden sosyal medya hesaplarınıza gönderilen tüm paylaşımlar
               </p>
@@ -764,7 +635,7 @@ export default function Dashboard() {
               className="btn-secondary"
               style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
             >
-              {historyLoading ? "Yenileniyor..." : "🔄 Yenile"}
+              {historyLoading ? "Yenileniyor..." : "Yenile"}
             </button>
           </div>
 
@@ -798,7 +669,7 @@ export default function Dashboard() {
             </div>
           ) : history.length === 0 ? (
             <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>📭</div>
+              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}></div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>Henüz Paylaşım Yapılmadı</h3>
               <p style={{ color: "#9ca3af", fontSize: "0.875rem", maxWidth: "460px", margin: "0 auto 1.5rem auto" }}>
                 Telegram botunuza bir fotoğraf gönderin. AI otomatik başlık üretsin veya kendi açıklamanızı ekleyin, ardından hemen veya zamanlayarak paylaşın!
@@ -810,7 +681,7 @@ export default function Dashboard() {
                 className="btn-primary"
                 style={{ textDecoration: "none", display: "inline-block", fontSize: "0.85rem" }}
               >
-                ✈️ Telegram Botu Aç (@Social_gunubirlik_bot)
+                Telegram Botu Aç (@Social_gunubirlik_bot)
               </a>
             </div>
           ) : (
@@ -821,7 +692,7 @@ export default function Dashboard() {
                   <div key={item.id} className="panel-card" style={{ marginBottom: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ fontSize: "1.1rem" }}>{item.mediaType === "video" ? "🎥" : "📸"}</span>
+                        <span style={{ fontSize: "1.1rem" }}>{item.mediaType === "video" ? "" : ""}</span>
                         <span style={{ fontSize: "0.85rem", color: "#9ca3af" }}>{dateStr}</span>
                       </div>
                       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -834,7 +705,7 @@ export default function Dashboard() {
                             color: item.platforms.facebook.success ? "#34d399" : "#f87171",
                             border: `1px solid ${item.platforms.facebook.success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
                           }}>
-                            👍 Facebook: {item.platforms.facebook.success ? "Yayınlandı" : "Hata"}
+                            Facebook: {item.platforms.facebook.success ? "Yayınlandı" : "Hata"}
                           </span>
                         )}
                         {item.platforms?.instagram && (
@@ -846,7 +717,7 @@ export default function Dashboard() {
                             color: item.platforms.instagram.success ? "#34d399" : "#f87171",
                             border: `1px solid ${item.platforms.instagram.success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
                           }}>
-                            📷 Instagram: {item.platforms.instagram.success ? "Yayınlandı" : "Hata"}
+                            Instagram: {item.platforms.instagram.success ? "Yayınlandı" : "Hata"}
                           </span>
                         )}
                         {item.platforms?.linkedin && (
@@ -858,7 +729,7 @@ export default function Dashboard() {
                             color: item.platforms.linkedin.success ? "#34d399" : "#f87171",
                             border: `1px solid ${item.platforms.linkedin.success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)"}`
                           }}>
-                            💼 LinkedIn: {item.platforms.linkedin.success ? "Yayınlandı" : "Hata"}
+                            LinkedIn: {item.platforms.linkedin.success ? "Yayınlandı" : "Hata"}
                           </span>
                         )}
                       </div>
@@ -903,7 +774,7 @@ export default function Dashboard() {
           {/* İstatistik & Başlık */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>⏰ Zamanlanmış Paylaşım Kuyruğu</h2>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Zamanlanmış Paylaşım Kuyruğu</h2>
               <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
                 Otomatik saati geldiğinde Facebook, Instagram ve LinkedIn hesaplarınızda yayınlanacak gönderiler
               </p>
@@ -914,7 +785,7 @@ export default function Dashboard() {
               className="btn-secondary"
               style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
             >
-              {scheduleLoading ? "Yenileniyor..." : "🔄 Yenile"}
+              {scheduleLoading ? "Yenileniyor..." : "Yenile"}
             </button>
           </div>
 
@@ -925,10 +796,10 @@ export default function Dashboard() {
             </div>
           ) : scheduleQueue.length === 0 ? (
             <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>⏳</div>
+              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}></div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>Kuyrukta Bekleyen Gönderi Yok</h3>
               <p style={{ color: "#9ca3af", fontSize: "0.875rem", maxWidth: "480px", margin: "0 auto 1.5rem auto" }}>
-                Telegram botunuza fotoğraf gönderdiğinizde çıkan onay kartından <strong>"⏰ Akşam 20:00"</strong> veya <strong>"⏰ 1 Saat Sonra"</strong> butonlarına tıklayarak gönderilerinizi otomatik sıraya alabilirsiniz.
+                Telegram botunuza fotoğraf gönderdiğinizde çıkan onay kartından <strong>"Akşam 20:00"</strong> veya <strong>"1 Saat Sonra"</strong> butonlarına tıklayarak gönderilerinizi otomatik sıraya alabilirsiniz.
               </p>
             </div>
           ) : (
@@ -940,7 +811,6 @@ export default function Dashboard() {
                   <div key={item.id} className="panel-card" style={{ marginBottom: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ fontSize: "1.2rem" }}>⏰</span>
                         <div>
                           <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#fbbf24" }}>
                             {targetDate.toLocaleString("tr-TR")}
@@ -960,14 +830,14 @@ export default function Dashboard() {
                           color: item.applyWatermark ? "#34d399" : "#9ca3af",
                           border: `1px solid ${item.applyWatermark ? "rgba(16, 185, 129, 0.3)" : "rgba(156, 163, 175, 0.2)"}`
                         }}>
-                          🎨 Filigran: {item.applyWatermark ? "Açık" : "Kapalı"}
+                          Filigran: {item.applyWatermark ? "Açık" : "Kapalı"}
                         </span>
                         <button
                           onClick={() => cancelScheduledItem(item.id)}
                           className="btn-secondary"
                           style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem", color: "#f87171", borderColor: "rgba(239, 68, 68, 0.3)" }}
                         >
-                          ❌ İptal Et
+                          İptal Et
                         </button>
                       </div>
                     </div>
@@ -998,7 +868,7 @@ export default function Dashboard() {
           <div className="panel-card">
             <div className="panel-header">
               <div>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>🎨 Tamamen Ücretsiz AI Görsel & Post Stüdyosu</h2>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Tamamen Ücretsiz AI Görsel & Post Stüdyosu</h2>
                 <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
                   Herhangi bir API key veya üyelik gerektirmeden hayalinizdeki gezi görselini, Türkçe başlığını ve etiketlerini tek tıkla üretin
                 </p>
@@ -1040,7 +910,7 @@ export default function Dashboard() {
                       cursor: "pointer",
                     }}
                   >
-                    ✨ {sample}
+                    {sample}
                   </button>
                 ))}
               </div>
@@ -1058,7 +928,7 @@ export default function Dashboard() {
                     onChange={() => setAiFormat("feed")}
                     style={{ accentColor: "#3b82f6" }}
                   />
-                  📌 Akış Gönderisi (1:1 Kare)
+                  Akış Gönderisi (1:1 Kare)
                 </label>
                 <label style={{ fontSize: "0.875rem", color: "#d1d5db", display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer" }}>
                   <input
@@ -1069,7 +939,7 @@ export default function Dashboard() {
                     onChange={() => setAiFormat("story")}
                     style={{ accentColor: "#3b82f6" }}
                   />
-                  📱 Instagram Hikayesi (9:16 Dikey)
+                  Instagram Hikayesi (9:16 Dikey)
                 </label>
               </div>
 
@@ -1079,7 +949,7 @@ export default function Dashboard() {
                 className="btn-primary"
                 style={{ background: "#8b5cf6", fontSize: "0.9rem", padding: "0.6rem 1.5rem" }}
               >
-                {aiLoading ? "🎨 Yapay Zeka Çiziyor (10-15 sn)..." : "⚡ Görsel & Başlık Üret"}
+                {aiLoading ? "Yapay Zeka Çiziyor (10-15 sn)..." : "Görsel & Başlık Üret"}
               </button>
             </div>
           </div>
@@ -1089,7 +959,7 @@ export default function Dashboard() {
             <div className="panel-card" style={{ borderColor: "rgba(139, 92, 246, 0.4)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "0.75rem" }}>
                 <h3 style={{ fontSize: "1.1rem", fontWeight: "600", color: "#c084fc" }}>
-                  ✨ Üretilen Gönderi Önizlemesi ({aiResult.format === "story" ? "Instagram Story 9:16" : "Post 1:1"})
+                  Üretilen Gönderi Önizlemesi ({aiResult.format === "story" ? "Instagram Story 9:16" : "Post 1:1"})
                 </h3>
                 <span className="badge-connected">Günübirlik Filigranı Eklendi</span>
               </div>
@@ -1129,7 +999,7 @@ export default function Dashboard() {
                       className="btn-primary"
                       style={{ flex: 1, background: "#2563eb" }}
                     >
-                      {aiPublishLoading ? "Paylaşılıyor..." : "🚀 Facebook & Instagram'da Paylaş"}
+                      {aiPublishLoading ? "Paylaşılıyor..." : "Facebook & Instagram'da Paylaş"}
                     </button>
                     <a
                       href="https://t.me/Social_gunubirlik_bot"
@@ -1138,21 +1008,11 @@ export default function Dashboard() {
                       className="btn-secondary"
                       style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                     >
-                      ✈️ Telegram'a Git
+                      Telegram'a Git
                     </a>
                   </div>
 
-                  {aiPublishStatus && (
-                    <div style={{
-                      padding: "0.75rem",
-                      borderRadius: "8px",
-                      fontSize: "0.85rem",
-                      background: aiPublishStatus.startsWith("✅") ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                      color: aiPublishStatus.startsWith("✅") ? "#34d399" : "#f87171"
-                    }}>
-                      {aiPublishStatus}
-                    </div>
-                  )}
+                  {aiPublishStatus && <StatusNote text={aiPublishStatus} />}
                 </div>
               </div>
             </div>
@@ -1167,7 +1027,7 @@ export default function Dashboard() {
           <div className="panel-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
               <div>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>💬 Otomatik Yorum & DM Yanıtlama (Auto-Reply)</h2>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Otomatik Yorum & DM Yanıtlama (Auto-Reply)</h2>
                 <p style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: "0.2rem" }}>
                   Instagram ve Facebook gönderilerinizin altına gelen "fiyat nedir?", "neresi burası?", "detay alabilir miyim?" yorumlarına anında akıllı yanıt verin
                 </p>
@@ -1179,7 +1039,7 @@ export default function Dashboard() {
                   className="btn-primary"
                   style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
                 >
-                  🔍 Şimdi Yorumları Tara & Yanıtla
+                  Şimdi Yorumları Tara & Yanıtla
                 </button>
                 <button
                   onClick={fetchAutoReply}
@@ -1187,22 +1047,18 @@ export default function Dashboard() {
                   className="btn-secondary"
                   style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}
                 >
-                  🔄 Yenile
+                  Yenile
                 </button>
               </div>
             </div>
 
-            {autoReplyCheckStatus && (
-              <div style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "8px", background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", fontSize: "0.85rem" }}>
-                ℹ️ {autoReplyCheckStatus}
-              </div>
-            )}
+            {autoReplyCheckStatus && <StatusNote text={autoReplyCheckStatus} tone="neutral" />}
           </div>
 
           {/* Kurallar Listesi */}
           <div className="panel-card">
             <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" }}>
-              📋 Aktif Yanıt Kuralları ({autoReplyRules.length})
+              Aktif Yanıt Kuralları ({autoReplyRules.length})
             </h3>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -1244,7 +1100,7 @@ export default function Dashboard() {
                     </div>
 
                     <p style={{ fontSize: "0.85rem", color: "#e5e7eb", background: "rgba(0,0,0,0.3)", padding: "0.6rem", borderRadius: "8px", margin: 0 }}>
-                      💬 <em>"{rule.reply}"</em>
+                      <em>"{rule.reply}"</em>
                     </p>
                   </div>
 
@@ -1271,7 +1127,7 @@ export default function Dashboard() {
 
           {/* Yeni Kural Ekleme Formu */}
           <div className="panel-card">
-            <h3 style={{ fontSize: "1.05rem", fontWeight: "600", marginBottom: "0.75rem" }}>➕ Yeni Otomatik Yanıt Kuralı Ekle</h3>
+            <h3 style={{ fontSize: "1.05rem", fontWeight: "600", marginBottom: "0.75rem" }}>Yeni Otomatik Yanıt Kuralı Ekle</h3>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "1rem" }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
@@ -1302,21 +1158,21 @@ export default function Dashboard() {
               <textarea
                 value={newRuleReply}
                 onChange={(e) => setNewRuleReply(e.target.value)}
-                placeholder="Örn: Bize 0850 ... numarasından veya profildeki WhatsApp hattımızdan 7/24 ulaşabilirsiniz! 📞"
+                placeholder="Örn: Bize 0850 ... numarasından veya profildeki WhatsApp hattımızdan 7/24 ulaşabilirsiniz! "
                 className="form-input"
                 rows={2}
               />
             </div>
 
             <button onClick={addCustomRule} className="btn-primary" style={{ fontSize: "0.85rem" }}>
-              ➕ Kuralı Ekle & Kaydet
+              Kuralı Ekle & Kaydet
             </button>
           </div>
 
           {/* Son Yanıtlanan Yorumlar */}
           <div className="panel-card">
             <h3 style={{ fontSize: "1.05rem", fontWeight: "600", marginBottom: "0.75rem" }}>
-              📜 Son Otomatik Yanıtlanan Yorumlar ({autoReplyHistory.length})
+              Son Otomatik Yanıtlanan Yorumlar ({autoReplyHistory.length})
             </h3>
 
             {autoReplyHistory.length === 0 ? (
@@ -1336,15 +1192,15 @@ export default function Dashboard() {
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem", color: "#9ca3af", fontSize: "0.75rem" }}>
                       <span>
-                        {rec.platform === "instagram" ? "📷 Instagram" : "👍 Facebook"} • <strong>{rec.authorName}</strong>
+                        {rec.platform === "instagram" ? "Instagram" : "Facebook"} • <strong>{rec.authorName}</strong>
                       </span>
                       <span>{new Date(rec.repliedAt).toLocaleString("tr-TR")}</span>
                     </div>
                     <div style={{ color: "#f3f4f6", marginBottom: "0.3rem" }}>
-                      👤 Yorum: "<em>{rec.commentText}</em>"
+                      Yorum: "<em>{rec.commentText}</em>"
                     </div>
                     <div style={{ color: "#34d399", paddingLeft: "1rem", borderLeft: "2px solid #10b981" }}>
-                      🤖 Verilen Yanıt: {rec.replyText}
+                      Verilen Yanıt: {rec.replyText}
                     </div>
                   </div>
                 ))}
@@ -1359,7 +1215,7 @@ export default function Dashboard() {
         <div className="panel-card">
           <div className="panel-header">
             <div>
-              <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>✈️ Telegram Yapılandırması</h2>
+              <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Telegram Yapılandırması</h2>
               <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Telegram bot anahtarı ve yetkili kullanıcı ayarları</p>
             </div>
             <button
@@ -1367,7 +1223,7 @@ export default function Dashboard() {
               disabled={testResults["telegram"]?.loading || !settings.telegramBotToken}
               className="btn-secondary"
             >
-              {testResults["telegram"]?.loading ? "Kontrol ediliyor..." : "🔍 Bağlantıyı Test Et"}
+              {testResults["telegram"]?.loading ? "Kontrol ediliyor..." : "Bağlantıyı Test Et"}
             </button>
           </div>
 
@@ -1375,7 +1231,7 @@ export default function Dashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
               <label className="form-label" style={{ marginBottom: 0 }}>Telegram Bot Token (@BotFather)</label>
               <button onClick={() => showHelp("telegramBotToken")} className="btn-secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
-                ℹ️ Nasıl Alınır?
+                Nasıl Alınır?
               </button>
             </div>
             <div style={{ position: "relative" }}>
@@ -1400,7 +1256,7 @@ export default function Dashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
               <label className="form-label" style={{ marginBottom: 0 }}>Yetkili Telegram User ID'leri (Virgülle ayırın)</label>
               <button onClick={() => showHelp("allowedUserIds")} className="btn-secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
-                ℹ️ Nasıl Alınır?
+                Nasıl Alınır?
               </button>
             </div>
             <input
@@ -1432,9 +1288,9 @@ export default function Dashboard() {
 
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-              <h3 style={{ fontSize: "0.95rem", fontWeight: "600" }}>🔗 Telegram Webhook Kurulumu</h3>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: "600" }}>Telegram Webhook Kurulumu</h3>
               <button onClick={() => showHelp("webhook")} className="btn-secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
-                ℹ️ Nasıl Alınır?
+                Nasıl Alınır?
               </button>
             </div>
             <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.75rem" }}>
@@ -1461,7 +1317,7 @@ export default function Dashboard() {
                 className="btn-primary"
                 style={{ background: "#059669", whiteSpace: "nowrap" }}
               >
-                Webhook'u Kaydet 🚀
+                Webhook'u Kaydet 
               </button>
             </div>
           </div>
@@ -1473,7 +1329,7 @@ export default function Dashboard() {
         <div className="panel-card">
           <div className="panel-header">
             <div>
-              <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>👍 Facebook Sayfası & 📷 Instagram</h2>
+              <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Facebook Sayfası & Instagram</h2>
               <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Sayfanızda otomatik paylaşım yetkileri</p>
             </div>
             <button
@@ -1481,7 +1337,7 @@ export default function Dashboard() {
               disabled={testResults["facebook"]?.loading || !settings.fbPageAccessToken}
               className="btn-secondary"
             >
-              {testResults["facebook"]?.loading ? "Kontrol ediliyor..." : "🔍 Facebook Test Et"}
+              {testResults["facebook"]?.loading ? "Kontrol ediliyor..." : "Facebook Test Et"}
             </button>
           </div>
 
@@ -1490,7 +1346,7 @@ export default function Dashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
                 <label className="form-label" style={{ marginBottom: 0 }}>Facebook Page ID</label>
                 <button onClick={() => showHelp("fbPageId")} className="btn-secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
-                  ℹ️ Nasıl Alınır?
+                  Nasıl Alınır?
                 </button>
               </div>
               <input
@@ -1518,7 +1374,7 @@ export default function Dashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
               <label className="form-label" style={{ marginBottom: 0 }}>Facebook Page Access Token</label>
               <button onClick={() => showHelp("fbPageAccessToken")} className="btn-secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
-                ℹ️ Nasıl Alınır?
+                Nasıl Alınır?
               </button>
             </div>
             <div style={{ position: "relative" }}>
@@ -1557,13 +1413,13 @@ export default function Dashboard() {
           {/* Instagram Bölümü */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-              <h3 style={{ fontSize: "0.95rem", fontWeight: "600" }}>📷 Instagram Bağlantısı (Opsiyonel)</h3>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: "600" }}>Instagram Bağlantısı (Opsiyonel)</h3>
               <button
                 onClick={() => testConnection("instagram", { igUserId: settings.igUserId, pageAccessToken: settings.fbPageAccessToken })}
                 disabled={testResults["instagram"]?.loading || !settings.igUserId}
                 className="btn-secondary"
               >
-                {testResults["instagram"]?.loading ? "..." : "🔍 Instagram Test Et"}
+                {testResults["instagram"]?.loading ? "..." : "Instagram Test Et"}
               </button>
             </div>
 
@@ -1571,7 +1427,7 @@ export default function Dashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
                 <label className="form-label" style={{ marginBottom: 0 }}>Instagram Business User ID</label>
                 <button onClick={() => showHelp("igUserId")} className="btn-secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
-                  ℹ️ Nasıl Alınır?
+                  Nasıl Alınır?
                 </button>
               </div>
               <input
@@ -1603,7 +1459,7 @@ export default function Dashboard() {
         <div className="panel-card">
           <div className="panel-header">
             <div>
-              <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>💼 LinkedIn Bağlantısı (Opsiyonel)</h2>
+              <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>LinkedIn Bağlantısı (Opsiyonel)</h2>
               <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>LinkedIn profil veya şirket sayfası paylaşımı</p>
             </div>
             <button
@@ -1611,7 +1467,7 @@ export default function Dashboard() {
               disabled={testResults["linkedin"]?.loading || !settings.linkedinAccessToken}
               className="btn-secondary"
             >
-              {testResults["linkedin"]?.loading ? "Kontrol ediliyor..." : "🔍 Bağlantıyı Test Et"}
+              {testResults["linkedin"]?.loading ? "Kontrol ediliyor..." : "Bağlantıyı Test Et"}
             </button>
           </div>
 
@@ -1619,7 +1475,7 @@ export default function Dashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
               <label className="form-label" style={{ marginBottom: 0 }}>LinkedIn Access Token</label>
               <button onClick={() => showHelp("linkedinAccessToken")} className="btn-secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
-                ℹ️ Nasıl Alınır?
+                Nasıl Alınır?
               </button>
             </div>
             <div style={{ position: "relative" }}>
@@ -1674,19 +1530,19 @@ export default function Dashboard() {
         <div className="panel-card">
           <div className="panel-header">
             <div>
-              <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>☁️ Cloudinary (Medya CDN)</h2>
+              <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Cloudinary (Medya CDN)</h2>
               <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Instagram ve medya dosyaları için</p>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <button onClick={() => showHelp("cloudinary")} className="btn-secondary">
-                ℹ️ Nasıl Alınır?
+                Nasıl Alınır?
               </button>
               <button
                 onClick={() => testConnection("cloudinary", { cloudName: settings.cloudinaryCloudName, apiKey: settings.cloudinaryApiKey, apiSecret: settings.cloudinaryApiSecret })}
                 disabled={testResults["cloudinary"]?.loading || !settings.cloudinaryCloudName}
                 className="btn-secondary"
               >
-                {testResults["cloudinary"]?.loading ? "..." : "🔍 Ping Testi"}
+                {testResults["cloudinary"]?.loading ? "..." : "Ping Testi"}
               </button>
             </div>
           </div>
@@ -1756,7 +1612,7 @@ export default function Dashboard() {
           <div className="panel-card">
             <div className="panel-header">
               <div>
-                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>🤖 Yapay Zeka (AI) Başlık & Hashtag Üretici</h2>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Yapay Zeka (AI) Başlık & Hashtag Üretici</h2>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                   Google Gemini Vision modeli fotoğrafları piksel piksel inceleyip otomatik Türkçe başlık ve popüler etiketler üretir
                 </p>
@@ -1775,7 +1631,7 @@ export default function Dashboard() {
                   rel="noreferrer"
                   style={{ color: "#60a5fa", fontSize: "0.8rem", textDecoration: "none" }}
                 >
-                  🔗 Ücretsiz API Key Al (Google AI Studio)
+                  Ücretsiz API Key Al (Google AI Studio)
                 </a>
               </div>
               <div style={{ position: "relative" }}>
@@ -1796,7 +1652,7 @@ export default function Dashboard() {
                 </button>
               </div>
               <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.35rem" }}>
-                💡 API Key girilmediğinde sistem dahili seyahat şablon başlıklarını kullanır. Gemini API key girdiğinizde ise fotoğraftaki mekanı, havayı ve nesneleri analiz ederek özel başlık üretir.
+                API Key girilmediğinde sistem dahili seyahat şablon başlıklarını kullanır. Gemini API key girdiğinizde ise fotoğraftaki mekanı, havayı ve nesneleri analiz ederek özel başlık üretir.
               </p>
             </div>
           </div>
@@ -1805,7 +1661,7 @@ export default function Dashboard() {
           <div className="panel-card">
             <div className="panel-header">
               <div>
-                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>🎨 Otomatik Logo / Filigran (Watermark)</h2>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Otomatik Logo / Filigran (Watermark)</h2>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                   Fotoğraflarınızın sağ alt köşesine "Günübirlik" rozeti basarak telif hakkınızı korur
                 </p>
@@ -1876,7 +1732,7 @@ export default function Dashboard() {
           <div className="panel-card">
             <div className="panel-header">
               <div>
-                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>📧 E-Posta Bildirim Sistemi</h2>
+                <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>E-Posta Bildirim Sistemi</h2>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Paylaşımlar tamamlandığında veya hata oluştuğunda e-posta raporu alın</p>
               </div>
             </div>
@@ -1930,14 +1786,14 @@ export default function Dashboard() {
 
           {/* 4. Sisteme Eklenebilecek Gelecek Yenilikçi Özellikler */}
           <div className="panel-card">
-            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>💡 Eklenebilecek Yeni Süper Özellik Önerileri</h3>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>Eklenebilecek Yeni Süper Özellik Önerileri</h3>
             <p style={{ fontSize: "0.85rem", color: "#9ca3af", marginBottom: "1.25rem" }}>
               Zamanlayıcı, AI Başlık, Filigran ve Geçmiş başarıyla entegre edildi! İşte projenizi daha da büyütecek sonraki adım önerileri:
             </p>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>📱</div>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>1. Instagram Hikaye (Story) & Reels Paylaşımı</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                   Sadece feed gönderisi değil; Telegram'dan video veya fotoğraf attığınızda doğrudan Instagram Story veya Reels olarak otomatik boyutlandırılıp yayınlansın.
@@ -1945,7 +1801,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>👥</div>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>2. Telegram Kanal & Grup Dinleyicisi</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                   Botu yöneticisi olduğunuz bir Telegram kanalına veya seyahat grubunuza eklersiniz. Kanala atılan her tur duyurusu otomatik tüm sosyal ağlara dağıtılır.
@@ -1953,7 +1809,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>📊</div>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>3. Akıllı Paylaşım Saati Önerisi (Smart Time)</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                   Sayfanızın takipçilerinin en aktif olduğu saatleri (örn. Cuma 19:30, Pazar 11:00) analiz ederek bot size "En yüksek etkileşim için Pazar 11:00'e zamanlayalım mı?" der.
@@ -1961,7 +1817,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>💬</div>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>4. Otomatik Yorum & DM Yanıtlama (Auto-Reply)</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                   Instagram ve Facebook'ta gönderinin altına gelen "fiyat nedir?", "neresi burası?", "detay alabilir miyim?" yorumlarına anında otomatik yanıt veya DM gönderir.
@@ -1969,7 +1825,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>🌐</div>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>5. Çok Dilli (Multi-Language) Paylaşım</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                   Yabancı turistlere hitap etmek için AI aynı gönderinin altına İngilizce, Rusça veya Almanca çevirisini ve küresel hashtag'leri otomatik ekler.
@@ -1977,7 +1833,7 @@ export default function Dashboard() {
               </div>
 
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}>🖼️</div>
+                <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>6. Çoklu Fotoğraf / Karusel (Carousel) Desteği</h4>
                 <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
                   Telegram'dan 5-10 fotoğrafı albüm olarak gönderdiğinizde, Instagram ve Facebook'ta kaydırmalı galeri (karusel) şeklinde paylaşır.
@@ -2016,7 +1872,7 @@ export default function Dashboard() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "0.75rem" }}>
               <h3 style={{ fontSize: "1.15rem", fontWeight: "600", color: "#60a5fa" }}>
-                💡 {helpModal.title}
+                {helpModal.title}
               </h3>
               <button
                 onClick={() => setHelpModal(null)}
@@ -2042,7 +1898,7 @@ export default function Dashboard() {
                 fontSize: "0.8rem",
                 marginBottom: "1.25rem"
               }}>
-                ⚠️ <strong>Önemli:</strong> {helpModal.tip}
+                <strong>Önemli:</strong> {helpModal.tip}
               </div>
             )}
 
@@ -2055,7 +1911,7 @@ export default function Dashboard() {
                   className="btn-primary"
                   style={{ textDecoration: "none", fontSize: "0.8rem", padding: "0.5rem 1rem" }}
                 >
-                  🔗 {helpModal.link.label}
+                  {helpModal.link.label}
                 </a>
               ) : <div />}
               <button
@@ -2068,6 +1924,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

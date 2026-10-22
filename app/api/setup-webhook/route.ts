@@ -1,3 +1,4 @@
+import { withApiLog } from "@/lib/api/with_log";
 // app/api/setup-webhook/route.ts
 // Telegram webhook kayıt endpoint'i
 // GET /api/setup-webhook?url=https://your-app.vercel.app ile çağırın
@@ -7,7 +8,7 @@ import { config } from "@/lib/config";
 
 export const runtime = "nodejs";
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   const appUrl = req.nextUrl.searchParams.get("url") ??
     process.env.NEXT_PUBLIC_APP_URL;
 
@@ -42,3 +43,5 @@ export async function GET(req: NextRequest) {
     telegramResponse: result,
   });
 }
+
+export const GET = withApiLog("setup-webhook", GETHandler);

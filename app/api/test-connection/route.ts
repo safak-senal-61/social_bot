@@ -1,8 +1,9 @@
+import { withApiLog } from "@/lib/api/with_log";
 // app/api/test-connection/route.ts
 import { NextResponse } from "next/server";
 import axios from "axios";
 
-export async function POST(req: Request) {
+async function POSTHandler(req: Request) {
   try {
     const { platform, credentials } = await req.json();
 
@@ -98,3 +99,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, message: `Hata: ${errorDetail}` });
   }
 }
+
+export const POST = withApiLog("test-connection", POSTHandler);

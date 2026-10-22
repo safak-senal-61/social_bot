@@ -5,6 +5,18 @@
 import { config, loadEnvFromFile } from "../lib/config";
 import { getBot } from "../lib/telegram/bot";
 import { startSchedulerWorker, stopSchedulerWorker } from "../lib/scheduler/worker";
+import { logEvent, captureError } from "../lib/storage/logger";
+import { writeHeartbeat, HEARTBEAT_INTERVAL_MS } from "../lib/storage/heartbeat";
+
+// Bu süreçte yazılan tüm loglar debug sayfasında "bot" olarak etiketlenir
+process.env.LOG_ORIGIN = "bot";
+
+process.on("unhandledRejection", (reason) => {
+  captureError("system", "Bot: yakalanmamış Promise hatası", reason);
+});
+process.on("uncaughtException", (err) => {
+  captureError("system", "Bot: yakalanmamış istisna", err);
+});
 
 async function main() {
   loadEnvFromFile();
@@ -32,11 +44,16 @@ async function main() {
     console.log("==========================================");
     console.log("📲 Şimdi Telegram'dan botunuza mesaj veya fotoğraf gönderebilirsiniz!");
 
+    logEvent("success", "system", `Bot başlatıldı: @${botInfo.username}`, { pid: process.pid });
+    writeHeartbeat({ pid: process.pid });
+    setInterval(() => writeHeartbeat({ pid: process.pid }), HEARTBEAT_INTERVAL_MS).unref();
+
     // Zamanlayıcı servisini başlat
     startSchedulerWorker();
 
     await bot.launch();
   } catch (err) {
+    captureError("system", "Bot başlatılamadı", err);
     console.error("❌ Bot başlatma hatası:", err);
   }
 
