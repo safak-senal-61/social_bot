@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Rail from "@/components/Rail";
+import MobileAppNav from "@/components/MobileAppNav";
 import StatusNote from "@/components/StatusNote";
 import { buildRailGroups, TAB_TITLES, TAB_LEADS, type TabId } from "@/lib/ui/navigation";
 
@@ -563,7 +564,7 @@ export default function Dashboard() {
     return (
       <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "1rem" }}>
         <div style={{ width: "36px", height: "36px", border: "3px solid #3b82f6", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-        <p style={{ color: "#9ca3af" }}>Yönetim paneli yükleniyor...</p>
+        <p style={{ color: "var(--text-muted)" }}>Yönetim paneli yükleniyor...</p>
       </div>
     );
   }
@@ -576,6 +577,10 @@ export default function Dashboard() {
 
   return (
     <div className="shell">
+      <MobileAppNav
+        active={activeTab}
+        onSelect={(id) => setActiveTab(id as TabId)}
+      />
       <Rail
         groups={buildRailGroups({
           history: history.length,
@@ -611,7 +616,7 @@ export default function Dashboard() {
                 </span>
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600" }}>Telegram Bot</h3>
-              <p style={{ color: "#9ca3af", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
                 {isTelegramOk ? "@Social_gunubirlik_bot" : "Bot Token girilmedi"}
               </p>
             </div>
@@ -624,7 +629,7 @@ export default function Dashboard() {
                 </span>
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600" }}>Facebook Sayfası</h3>
-              <p style={{ color: "#9ca3af", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
                 {isFbOk ? `Günübirlik (ID: ${settings.fbPageId})` : "Sayfa ayarlanmadı"}
               </p>
             </div>
@@ -637,7 +642,7 @@ export default function Dashboard() {
                 </span>
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600" }}>Instagram</h3>
-              <p style={{ color: "#9ca3af", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
                 {isIgOk ? `ID: ${settings.igUserId}` : "İsteğe bağlı"}
               </p>
             </div>
@@ -650,7 +655,7 @@ export default function Dashboard() {
                 </span>
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600" }}>LinkedIn</h3>
-              <p style={{ color: "#9ca3af", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
                 {isLinkedinOk ? "Token tanımlı" : "İsteğe bağlı"}
               </p>
             </div>
@@ -658,11 +663,11 @@ export default function Dashboard() {
 
           {/* Web Üzerinden Hızlı Test Paylaşımı */}
           {isFbOk && (
-            <div className="panel-card" style={{ background: "rgba(30, 41, 59, 0.7)" }}>
+            <div className="panel-card" style={{ borderLeft: "4px solid var(--brand-green)" }}>
               <h3 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 Web Panelinden Hızlı Gönderi Paylaş (Facebook Test)
               </h3>
-              <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.75rem" }}>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
                 Telegram'ı beklemeden sayfanıza doğrudan bir gönderi atıp çalışıp çalışmadığını anında görün:
               </p>
 
@@ -679,7 +684,7 @@ export default function Dashboard() {
                   onClick={handleQuickPost}
                   disabled={testPostLoading || !testPostText}
                   className="btn-primary"
-                  style={{ background: "#2563eb", whiteSpace: "nowrap" }}
+                  style={{ whiteSpace: "nowrap" }}
                 >
                   {testPostLoading ? "Paylaşılıyor..." : "Sayfamda Paylaş"}
                 </button>
@@ -709,7 +714,7 @@ export default function Dashboard() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
               <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Paylaşım Geçmişi & İstatistikler</h2>
-              <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
                 Telegram üzerinden sosyal medya hesaplarınıza gönderilen tüm paylaşımlar
               </p>
             </div>
@@ -726,19 +731,19 @@ export default function Dashboard() {
           {/* Özet İstatistik Kartları */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
             <div className="panel-card" style={{ marginBottom: 0, padding: "1rem" }}>
-              <div style={{ color: "#9ca3af", fontSize: "0.8rem", fontWeight: 500 }}>Toplam Paylaşım</div>
+              <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontWeight: 500 }}>Toplam Paylaşım</div>
               <div style={{ fontSize: "1.75rem", fontWeight: 700, marginTop: "0.25rem", color: "#60a5fa" }}>
                 {history.length}
               </div>
             </div>
             <div className="panel-card" style={{ marginBottom: 0, padding: "1rem" }}>
-              <div style={{ color: "#9ca3af", fontSize: "0.8rem", fontWeight: 500 }}>Başarılı Yayınlar</div>
+              <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontWeight: 500 }}>Başarılı Yayınlar</div>
               <div style={{ fontSize: "1.75rem", fontWeight: 700, marginTop: "0.25rem", color: "#34d399" }}>
                 {history.filter((h) => h.status === "published").length}
               </div>
             </div>
             <div className="panel-card" style={{ marginBottom: 0, padding: "1rem" }}>
-              <div style={{ color: "#9ca3af", fontSize: "0.8rem", fontWeight: 500 }}>Zamanlanmış Kuyruk</div>
+              <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontWeight: 500 }}>Zamanlanmış Kuyruk</div>
               <div style={{ fontSize: "1.75rem", fontWeight: 700, marginTop: "0.25rem", color: "#fbbf24" }}>
                 {scheduleQueue.length}
               </div>
@@ -749,13 +754,13 @@ export default function Dashboard() {
           {historyLoading && history.length === 0 ? (
             <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1rem" }}>
               <div style={{ width: "32px", height: "32px", border: "3px solid #3b82f6", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 1rem auto" }} />
-              <p style={{ color: "#9ca3af" }}>Paylaşım geçmişi yükleniyor...</p>
+              <p style={{ color: "var(--text-muted)" }}>Paylaşım geçmişi yükleniyor...</p>
             </div>
           ) : history.length === 0 ? (
             <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
               <div style={{ fontSize: "3rem", marginBottom: "1rem" }}></div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>Henüz Paylaşım Yapılmadı</h3>
-              <p style={{ color: "#9ca3af", fontSize: "0.875rem", maxWidth: "460px", margin: "0 auto 1.5rem auto" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "460px", margin: "0 auto 1.5rem auto" }}>
                 Telegram botunuza bir fotoğraf gönderin. AI otomatik başlık üretsin veya kendi açıklamanızı ekleyin, ardından hemen veya zamanlayarak paylaşın!
               </p>
               <a
@@ -777,7 +782,7 @@ export default function Dashboard() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span style={{ fontSize: "1.1rem" }}>{item.mediaType === "video" ? "" : ""}</span>
-                        <span style={{ fontSize: "0.85rem", color: "#9ca3af" }}>{dateStr}</span>
+                        <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{dateStr}</span>
                       </div>
                       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         {item.platforms?.facebook && (
@@ -859,7 +864,7 @@ export default function Dashboard() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
               <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Zamanlanmış Paylaşım Kuyruğu</h2>
-              <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
                 Otomatik saati geldiğinde Facebook, Instagram ve LinkedIn hesaplarınızda yayınlanacak gönderiler
               </p>
             </div>
@@ -876,13 +881,13 @@ export default function Dashboard() {
           {scheduleLoading && scheduleQueue.length === 0 ? (
             <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1rem" }}>
               <div style={{ width: "32px", height: "32px", border: "3px solid #3b82f6", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 1rem auto" }} />
-              <p style={{ color: "#9ca3af" }}>Kuyruk kontrol ediliyor...</p>
+              <p style={{ color: "var(--text-muted)" }}>Kuyruk kontrol ediliyor...</p>
             </div>
           ) : scheduleQueue.length === 0 ? (
             <div className="panel-card" style={{ textAlign: "center", padding: "3rem 1.5rem" }}>
               <div style={{ fontSize: "3rem", marginBottom: "1rem" }}></div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>Kuyrukta Bekleyen Gönderi Yok</h3>
-              <p style={{ color: "#9ca3af", fontSize: "0.875rem", maxWidth: "480px", margin: "0 auto 1.5rem auto" }}>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", maxWidth: "480px", margin: "0 auto 1.5rem auto" }}>
                 Telegram botunuza fotoğraf gönderdiğinizde çıkan onay kartından <strong>"Akşam 20:00"</strong> veya <strong>"1 Saat Sonra"</strong> butonlarına tıklayarak gönderilerinizi otomatik sıraya alabilirsiniz.
               </p>
             </div>
@@ -899,7 +904,7 @@ export default function Dashboard() {
                           <div style={{ fontSize: "0.95rem", fontWeight: "600", color: "#fbbf24" }}>
                             {targetDate.toLocaleString("tr-TR")}
                           </div>
-                          <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                             {remainingMinutes > 0 ? `Yaklaşık ${remainingMinutes} dakika sonra yayınlanacak` : "Zamanı geldi, worker yayınlıyor..."}
                           </div>
                         </div>
@@ -911,7 +916,7 @@ export default function Dashboard() {
                           padding: "0.25rem 0.6rem",
                           borderRadius: "6px",
                           background: item.applyWatermark ? "rgba(16, 185, 129, 0.15)" : "rgba(156, 163, 175, 0.15)",
-                          color: item.applyWatermark ? "#34d399" : "#9ca3af",
+                          color: item.applyWatermark ? "#34d399" : "var(--text-muted)",
                           border: `1px solid ${item.applyWatermark ? "rgba(16, 185, 129, 0.3)" : "rgba(156, 163, 175, 0.2)"}`
                         }}>
                           Filigran: {item.applyWatermark ? "Açık" : "Kapalı"}
@@ -953,7 +958,7 @@ export default function Dashboard() {
             <div className="panel-header">
               <div>
                 <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Tamamen Ücretsiz AI İş Görseli & İlan Stüdyosu</h2>
-                <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
                   Herhangi bir API key gerektirmeden profesyonel iş ilanı ve çalışma anı görsellerini, Türkçe başlığını ve etiketlerini tek tıkla üretin
                 </p>
               </div>
@@ -991,7 +996,7 @@ export default function Dashboard() {
                       borderRadius: "9999px",
                       padding: "0.25rem 0.65rem",
                       fontSize: "0.75rem",
-                      color: "#9ca3af",
+                      color: "var(--text-muted)",
                       cursor: "pointer",
                     }}
                   >
@@ -1113,7 +1118,7 @@ export default function Dashboard() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
               <div>
                 <h2 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Otomatik Yorum & DM Yanıtlama (Auto-Reply)</h2>
-                <p style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: "0.2rem" }}>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
                   Instagram ve Facebook gönderilerinizin altına gelen "fiyat nedir?", "neresi burası?", "detay alabilir miyim?" yorumlarına anında akıllı yanıt verin
                 </p>
               </div>
@@ -1170,7 +1175,7 @@ export default function Dashboard() {
                         padding: "0.15rem 0.5rem",
                         borderRadius: "9999px",
                         background: rule.enabled ? "rgba(16, 185, 129, 0.15)" : "rgba(156, 163, 175, 0.15)",
-                        color: rule.enabled ? "#34d399" : "#9ca3af"
+                        color: rule.enabled ? "#34d399" : "var(--text-muted)"
                       }}>
                         {rule.enabled ? "Aktif" : "Pasif"}
                       </span>
@@ -1261,7 +1266,7 @@ export default function Dashboard() {
             </h3>
 
             {autoReplyHistory.length === 0 ? (
-              <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Henüz otomatik yanıt verilmiş bir yorum bulunmuyor.</p>
+              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Henüz otomatik yanıt verilmiş bir yorum bulunmuyor.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {autoReplyHistory.slice(0, 15).map((rec, idx) => (
@@ -1275,7 +1280,7 @@ export default function Dashboard() {
                       fontSize: "0.85rem",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem", color: "#9ca3af", fontSize: "0.75rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem", color: "var(--text-muted)", fontSize: "0.75rem" }}>
                       <span>
                         {rec.platform === "instagram" ? "Instagram" : "Facebook"} • <strong>{rec.authorName}</strong>
                       </span>
@@ -1301,7 +1306,7 @@ export default function Dashboard() {
           <div className="panel-header">
             <div>
               <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Telegram Yapılandırması</h2>
-              <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Telegram bot anahtarı ve yetkili kullanıcı ayarları</p>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Telegram bot anahtarı ve yetkili kullanıcı ayarları</p>
             </div>
             <button
               onClick={() => testConnection("telegram", { botToken: settings.telegramBotToken })}
@@ -1330,7 +1335,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => toggleVisibility("telegram")}
-                style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "0.8rem" }}
+                style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem" }}
               >
                 {showTokens["telegram"] ? "Gizle" : "Göster"}
               </button>
@@ -1378,7 +1383,7 @@ export default function Dashboard() {
                 Nasıl Alınır?
               </button>
             </div>
-            <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginBottom: "0.75rem" }}>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
               Botun mesajları sunucunuza iletebilmesi için genel açık adresinizi (ngrok, localtunnel veya canlı site) girin:
             </p>
 
@@ -1415,7 +1420,7 @@ export default function Dashboard() {
           <div className="panel-header">
             <div>
               <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Facebook Sayfası & Instagram</h2>
-              <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Sayfanızda otomatik paylaşım yetkileri</p>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Sayfanızda otomatik paylaşım yetkileri</p>
             </div>
             <button
               onClick={() => testConnection("facebook", { pageId: settings.fbPageId, pageAccessToken: settings.fbPageAccessToken })}
@@ -1473,7 +1478,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => toggleVisibility("fbToken")}
-                style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "0.8rem" }}
+                style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem" }}
               >
                 {showTokens["fbToken"] ? "Gizle" : "Göster"}
               </button>
@@ -1545,7 +1550,7 @@ export default function Dashboard() {
           <div className="panel-header">
             <div>
               <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>LinkedIn Bağlantısı (Opsiyonel)</h2>
-              <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>LinkedIn profil veya şirket sayfası paylaşımı</p>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>LinkedIn profil veya şirket sayfası paylaşımı</p>
             </div>
             <button
               onClick={() => testConnection("linkedin", { accessToken: settings.linkedinAccessToken, organizationId: settings.linkedinOrganizationId || "" })}
@@ -1575,7 +1580,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => toggleVisibility("linkedin")}
-                style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "0.8rem" }}
+                style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem" }}
               >
                 {showTokens["linkedin"] ? "Gizle" : "Göster"}
               </button>
@@ -1591,7 +1596,7 @@ export default function Dashboard() {
               placeholder="Örn: 112026985 (Boş bırakılırsa kişisel profilde paylaşılır)"
               className="form-input"
             />
-            <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.25rem" }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
               Şirketinizin LinkedIn admin URL&apos;sindeki rakamdır. (Örn: linkedin.com/company/<strong>112026985</strong>/admin)
             </p>
           </div>
@@ -1616,7 +1621,7 @@ export default function Dashboard() {
           <div className="panel-header">
             <div>
               <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Cloudinary (Medya CDN)</h2>
-              <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Instagram ve medya dosyaları için</p>
+              <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Instagram ve medya dosyaları için</p>
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <button onClick={() => showHelp("cloudinary")} className="btn-secondary">
@@ -1668,7 +1673,7 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => toggleVisibility("cloudinary")}
-                  style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "0.8rem" }}
+                  style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem" }}
                 >
                   {showTokens["cloudinary"] ? "Gizle" : "Göster"}
                 </button>
@@ -1698,7 +1703,7 @@ export default function Dashboard() {
             <div className="panel-header">
               <div>
                 <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Yapay Zeka (AI) Başlık & Hashtag Üretici</h2>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   Google Gemini Vision modeli fotoğrafları piksel piksel inceleyip otomatik Türkçe başlık ve popüler etiketler üretir
                 </p>
               </div>
@@ -1731,12 +1736,12 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => toggleVisibility("gemini")}
-                  style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "0.8rem" }}
+                  style={{ position: "absolute", right: "0.6rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.8rem" }}
                 >
                   {showTokens["gemini"] ? "Gizle" : "Göster"}
                 </button>
               </div>
-              <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: "0.35rem" }}>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
                 API Key girilmediğinde sistem dahili seyahat şablon başlıklarını kullanır. Gemini API key girdiğinizde ise fotoğraftaki mekanı, havayı ve nesneleri analiz ederek özel başlık üretir.
               </p>
             </div>
@@ -1747,7 +1752,7 @@ export default function Dashboard() {
             <div className="panel-header">
               <div>
                 <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>Otomatik Logo & Filigran Stüdyosu</h2>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   Tüm paylaşılan fotoğraflara logonuzu, marka metninizi, şık rozet şablonunu veya telif desenini otomatik ekler
                 </p>
               </div>
@@ -1789,13 +1794,13 @@ export default function Dashboard() {
                         Özel Logo Aktif
                       </span>
                     ) : (
-                      <span style={{ fontSize: "0.72rem", background: "rgba(255, 255, 255, 0.05)", color: "#9ca3af", padding: "0.15rem 0.5rem", borderRadius: "9999px" }}>
+                      <span style={{ fontSize: "0.72rem", background: "rgba(255, 255, 255, 0.05)", color: "var(--text-muted)", padding: "0.15rem 0.5rem", borderRadius: "9999px" }}>
                         Şablon Rozet Aktif
                       </span>
                     )}
                   </div>
 
-                  <p style={{ fontSize: "0.76rem", color: "#9ca3af", lineHeight: 1.4, marginBottom: "0.75rem" }}>
+                  <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", lineHeight: 1.4, marginBottom: "0.75rem" }}>
                     PNG veya SVG formatında logonuzu yükleyin. Logonuz marka metninizle birlikte yatay rozette veya tek başına kullanılabilir.
                   </p>
 
@@ -1964,7 +1969,7 @@ export default function Dashboard() {
                               padding: "0.4rem",
                               fontSize: "0.78rem",
                               fontWeight: 600,
-                              color: isSel ? "#78cfc3" : "#9ca3af",
+                              color: isSel ? "#78cfc3" : "var(--text-muted)",
                               cursor: "pointer"
                             }}
                           >
@@ -1996,7 +2001,7 @@ export default function Dashboard() {
                               padding: "0.4rem",
                               fontSize: "0.78rem",
                               fontWeight: 600,
-                              color: isSel ? "#78cfc3" : "#9ca3af",
+                              color: isSel ? "#78cfc3" : "var(--text-muted)",
                               cursor: "pointer"
                             }}
                           >
@@ -2057,7 +2062,7 @@ export default function Dashboard() {
                   <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#e5e7eb" }}>
                     Canlı Fotoğraf Önizlemesi
                   </span>
-                  <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                     Konum: {settings.watermarkPosition || "bottom-right"}
                   </span>
                 </div>
@@ -2330,7 +2335,7 @@ export default function Dashboard() {
             <div className="panel-header">
               <div>
                 <h2 style={{ fontSize: "1.15rem", fontWeight: "600" }}>E-Posta Bildirim Sistemi</h2>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>Paylaşımlar tamamlandığında veya hata oluştuğunda e-posta raporu alın</p>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Paylaşımlar tamamlandığında veya hata oluştuğunda e-posta raporu alın</p>
               </div>
             </div>
 
@@ -2384,7 +2389,7 @@ export default function Dashboard() {
           {/* 4. Sisteme Eklenebilecek Gelecek Yenilikçi Özellikler */}
           <div className="panel-card">
             <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "0.5rem" }}>Eklenebilecek Yeni Süper Özellik Önerileri</h3>
-            <p style={{ fontSize: "0.85rem", color: "#9ca3af", marginBottom: "1.25rem" }}>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>
               Zamanlayıcı, AI Başlık, Filigran ve Geçmiş başarıyla entegre edildi! İşte projenizi daha da büyütecek sonraki adım önerileri:
             </p>
 
@@ -2392,7 +2397,7 @@ export default function Dashboard() {
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>1. Instagram Hikaye (Story) & Reels Paylaşımı</h4>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   Sadece feed gönderisi değil; Telegram'dan video veya fotoğraf attığınızda doğrudan Instagram Story veya Reels olarak otomatik boyutlandırılıp yayınlansın.
                 </p>
               </div>
@@ -2400,7 +2405,7 @@ export default function Dashboard() {
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>2. Telegram Kanal & Grup Dinleyicisi</h4>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   Botu yöneticisi olduğunuz bir Telegram kanalına veya seyahat grubunuza eklersiniz. Kanala atılan her tur duyurusu otomatik tüm sosyal ağlara dağıtılır.
                 </p>
               </div>
@@ -2408,7 +2413,7 @@ export default function Dashboard() {
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>3. Akıllı Paylaşım Saati Önerisi (Smart Time)</h4>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   Sayfanızın takipçilerinin en aktif olduğu saatleri (örn. Cuma 19:30, Pazar 11:00) analiz ederek bot size "En yüksek etkileşim için Pazar 11:00'e zamanlayalım mı?" der.
                 </p>
               </div>
@@ -2416,7 +2421,7 @@ export default function Dashboard() {
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>4. Otomatik Yorum & DM Yanıtlama (Auto-Reply)</h4>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   Instagram ve Facebook'ta gönderinin altına gelen "fiyat nedir?", "neresi burası?", "detay alabilir miyim?" yorumlarına anında otomatik yanıt veya DM gönderir.
                 </p>
               </div>
@@ -2424,7 +2429,7 @@ export default function Dashboard() {
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>5. Çok Dilli (Multi-Language) Paylaşım</h4>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   Yabancı turistlere hitap etmek için AI aynı gönderinin altına İngilizce, Rusça veya Almanca çevirisini ve küresel hashtag'leri otomatik ekler.
                 </p>
               </div>
@@ -2432,7 +2437,7 @@ export default function Dashboard() {
               <div style={{ background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: "1.3rem", marginBottom: "0.5rem" }}></div>
                 <h4 style={{ fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem" }}>6. Çoklu Fotoğraf / Karusel (Carousel) Desteği</h4>
-                <p style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                   Telegram'dan 5-10 fotoğrafı albüm olarak gönderdiğinizde, Instagram ve Facebook'ta kaydırmalı galeri (karusel) şeklinde paylaşır.
                 </p>
               </div>
@@ -2473,7 +2478,7 @@ export default function Dashboard() {
               </h3>
               <button
                 onClick={() => setHelpModal(null)}
-                style={{ background: "none", border: "none", color: "#9ca3af", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1 }}
+                style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "1.4rem", cursor: "pointer", lineHeight: 1 }}
               >
                 ✕
               </button>

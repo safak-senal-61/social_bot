@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Rail from "@/components/Rail";
+import MobileAppNav from "@/components/MobileAppNav";
 import { RAIL_GROUPS } from "@/lib/ui/navigation";
 import {
   filterLogs,
@@ -227,6 +228,7 @@ export default function DebugPage() {
 
   return (
     <div className="shell">
+      <MobileAppNav onDebugPage />
       <Rail groups={RAIL_GROUPS} onDebugPage />
       <main className="stage">
         <header className="stage-head">

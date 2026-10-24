@@ -17,9 +17,7 @@ export interface RailGroup {
 
 interface Props {
   groups: RailGroup[];
-  /** Panel sayfasında aktif sekme; /debug sayfasında boş bırakılır */
   active?: string;
-  /** Verilirse öğeler buton olur (aynı sayfada sekme geçişi), verilmezse /?tab=... bağlantısı */
   onSelect?: (id: string) => void;
   onDebugPage?: boolean;
 }
@@ -46,7 +44,7 @@ function usePulse(): Pulse {
           errorsLastHour: data.summary.errorsLastHour,
         });
       } catch {
-        // Ağ hatası menüyü bozmasın; bir sonraki turda tekrar denenir
+        // Ağ hatası menüyü bozmasın
       }
     };
     load();
@@ -62,14 +60,69 @@ function usePulse(): Pulse {
 
 export default function Rail({ groups, active, onSelect, onDebugPage }: Props) {
   const pulse = usePulse();
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("gb_theme");
+    if (saved === "dark") {
+      setIsDark(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("gb_theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("gb_theme", "light");
+    }
+  };
 
   return (
     <aside className="rail" aria-label="Ana menü">
+      {/* Marka & Logo Alanı */}
       <div className="rail-brand">
-        <span className="rail-brand-name">Günübirlik</span>
-        <span className="rail-brand-sub">Yayın paneli</span>
+        <Link href="/" className="rail-brand-link">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-wordmark.webp"
+            alt="Günübirlik"
+            className="rail-brand-logo"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/logo.png";
+            }}
+          />
+        </Link>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.5rem" }}>
+          <span className="rail-brand-badge">
+            YAYIN &amp; İŞ BOTU
+          </span>
+          <a
+            href="https://gunubirlik.qrders.com.tr"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Canlı Günübirlik web sitesine git"
+            style={{
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              color: "var(--brand-green)",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: "2px"
+            }}
+          >
+            <span>gunubirlik.qrders.com.tr</span>
+            <span>↗</span>
+          </a>
+        </div>
       </div>
 
+      {/* Navigasyon Listesi */}
       <nav className="rail-nav">
         {groups.map((group) => (
           <div className="rail-group" key={group.title}>
@@ -102,9 +155,9 @@ export default function Rail({ groups, active, onSelect, onDebugPage }: Props) {
         ))}
 
         <div className="rail-group">
-          <p className="rail-group-title">Sorun giderme</p>
+          <p className="rail-group-title">Sistem &amp; Tanı</p>
           <Link href="/debug" className="rail-item" aria-current={onDebugPage ? "page" : undefined}>
-            <span>Hata ayıklama</span>
+            <span>Hata &amp; Günlük Kayıtları</span>
             {pulse.errorsLastHour > 0 ? (
               <span className="rail-count rail-count-alert" title="Son 1 saatteki hata sayısı">
                 {pulse.errorsLastHour}
@@ -114,17 +167,34 @@ export default function Rail({ groups, active, onSelect, onDebugPage }: Props) {
         </div>
       </nav>
 
+      {/* Alt Durum & Tema Alanı */}
       <div className="rail-status" aria-live="polite">
         <span
           className={`dot ${pulse.botAlive === null ? "dot-idle" : pulse.botAlive ? "dot-ok" : "dot-bad"}`}
           aria-hidden="true"
         />
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <p className="rail-status-line">
-            {pulse.botAlive === null ? "Bot durumu okunuyor" : pulse.botAlive ? "Telegram botu çalışıyor" : "Telegram botu kapalı"}
+            {pulse.botAlive === null ? "Bot okunuyor..." : pulse.botAlive ? "Telegram Botu Aktif" : "Telegram Botu Kapalı"}
           </p>
-          {pulse.lastBeat ? <p className="rail-status-sub">son sinyal {formatAgo(pulse.lastBeat)}</p> : null}
+          {pulse.lastBeat ? <p className="rail-status-sub">sinyal: {formatAgo(pulse.lastBeat)}</p> : null}
         </div>
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={isDark ? "Açık Temaya Geç (Varsayılan)" : "Karanlık Temaya Geç"}
+          style={{
+            background: "var(--bg-subtle)",
+            border: "1px solid var(--line)",
+            borderRadius: "6px",
+            padding: "0.25rem 0.45rem",
+            fontSize: "0.82rem",
+            cursor: "pointer",
+            color: "var(--text)"
+          }}
+        >
+          {isDark ? "☀️" : "🌙"}
+        </button>
       </div>
     </aside>
   );
